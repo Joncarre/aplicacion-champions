@@ -1,0 +1,221 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { CalendarOff, Check, Wallet } from 'lucide-react'
+import type { Match, Prediction } from '@/types'
+import { useAuth } from '@/context/AuthContext'
+import { useData } from '@/context/DataContext'
+import { useNow } from '@/hooks/useNow'
+import { getBackend } from '@/services/backend'
+import { formatLongDay, madridDayKey } from '@/lib/date'
+import { lockReasonFor } from '@/lib/locks'
+import { MatchCard, type DraftScore } from '@/components/MatchCard'
+import { MatchdayPicker } from '@/components/MatchdayPicker'
+import { Alert, EmptyState, PageHeader } from '@/components/ui'
+import { Spinner } from '@/components/Spinner'
+
+type Drafts = Record<string, DraftScore>
+
+export default function Jornadas() {
+  const { user } = useAuth()
+  const { loading, teamById, matchesByMatchday, myPredictions, currentMatchday, refresh } = useData()
+  const now = useNow()
+
+  const [matchday, setMatchday] = useState(currentMatchday)
+  const [drafts, setDrafts] = useState<Drafts>({})
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+
+  // Al terminar de cargar se abre la jornada en juego, pero solo la primera
+  // vez: si el usuario ya ha elegido otra, no se le mueve de sitio.
+  const openedInitial = useRef(false)
+  useEffect(() => {
+    if (loading || openedInitial.current) return
+    openedInitial.current = true
+    setMatchday(currentMatchday)
+  }, [loading, currentMatchday])
+
+  // Cambiar de jornada descarta lo que se estuviera escribiendo sin guardar.
+  useEffect(() => {
+    setDrafts({})
+    setFeedback(null)
+  }, [matchday])
+
+  const matches = useMemo(() => matchesByMatchday(matchday), [matchesByMatchday, matchday])
+  const hasPaid = user?.hasPaid ?? false
+
+  const byDay = useMemo(() => {
+    const groups = new Map<string, Match[]>()
+    for (const match of matches) {
+      const key = madridDayKey(match.kickoff)
+      const bucket = groups.get(key)
+      if (bucket) bucket.push(match)
+      else groups.set(key, [match])
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [matches])
+
+  /** Apuestas escritas que están completas y son distintas de lo ya guardado. */
+  const pending = useMemo(() => {
+    const result: Prediction[] = []
+    if (!user) return result
+
+    for (const match of matches) {
+      const draft = drafts[match.id]
+      if (!draft || draft.home === '' || draft.away === '') continue
+      if (lockReasonFor(match, { hasPaid, currentMatchday, now }) !== null) continue
+
+      const homeGoals = Number(draft.home)
+      const awayGoals = Number(draft.away)
+      const saved = myPredictions.get(match.id)
+      if (saved && saved.homeGoals === homeGoals && saved.awayGoals === awayGoals) continue
+
+      result.push({
+        id: `${user.id}__${match.id}`,
+        userId: user.id,
+        matchId: match.id,
+        matchday: match.matchday,
+        homeGoals,
+        awayGoals,
+        updatedAt: Date.now(),
+      })
+    }
+    return result
+  }, [drafts, matches, myPredictions, user, hasPaid, currentMatchday, now])
+
+  /** Partidos abiertos que aún no tienen apuesta guardada ni escrita. */
+  const missing = useMemo(
+    () =>
+      matches.filter((match) => {
+        if (lockReasonFor(match, { hasPaid, currentMatchday, now }) !== null) return false
+        const draft = drafts[match.id]
+        if (draft && draft.home !== '' && draft.away !== '') return false
+        return !myPredictions.get(match.id)
+      }).length,
+    [matches, drafts, myPredictions, hasPaid, currentMatchday, now],
+  )
+
+  async function save() {
+    if (pending.length === 0 || saving) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const backend = await getBackend()
+      await backend.savePredictions(pending)
+      await refresh()
+      setDrafts({})
+      setFeedback({
+        tone: 'success',
+        text: pending.length === 1 ? 'Apuesta guardada' : `${pending.length} apuestas guardadas`,
+      })
+    } catch (cause) {
+      setFeedback({
+        tone: 'error',
+        text: cause instanceof Error ? cause.message : 'No se han podido guardar las apuestas',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const isOpenMatchday = matchday === currentMatchday
+
+  return (
+    <>
+      <PageHeader
+        title="Jornadas"
+        subtitle={
+          isOpenMatchday
+            ? 'Apuesta antes de que empiece cada partido'
+            : matchday < currentMatchday
+              ? 'Jornada terminada'
+              : 'Se abrirá cuando acabe la jornada anterior'
+        }
+      />
+
+      <MatchdayPicker value={matchday} onChange={setMatchday} currentMatchday={currentMatchday} />
+
+      <div className="mt-5 space-y-4">
+        {!hasPaid ? (
+          <Alert tone="warning">
+            <span className="inline-flex items-center gap-1.5">
+              <Wallet size={14} aria-hidden="true" />
+              Todavía no constas como pagado, así que puedes mirar pero no apostar. Avisa al administrador.
+            </span>
+          </Alert>
+        ) : null}
+
+        {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
+
+        {isOpenMatchday && hasPaid && missing > 0 ? (
+          <Alert tone="info">
+            Te faltan {missing} {missing === 1 ? 'partido' : 'partidos'} por apostar en esta jornada.
+          </Alert>
+        ) : null}
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Spinner label="Cargando la jornada" />
+          </div>
+        ) : matches.length === 0 ? (
+          <EmptyState
+            icon={<CalendarOff size={28} aria-hidden="true" />}
+            title="Todavía no hay partidos"
+            description={
+              user?.isAdmin ? (
+                <>
+                  Genera el calendario desde el{' '}
+                  <Link to="/admin" className="font-semibold text-brand-soft hover:underline">
+                    panel de administración
+                  </Link>
+                  .
+                </>
+              ) : (
+                'El administrador aún no ha cargado el calendario de esta jornada.'
+              )
+            }
+          />
+        ) : (
+          byDay.map(([day, dayMatches]) => (
+            <section key={day} className="space-y-2.5">
+              <h2 className="pt-1 text-xs font-semibold tracking-wide text-ink-mute uppercase">
+                {formatLongDay(dayMatches[0]?.kickoff ?? 0)}
+              </h2>
+              {dayMatches.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  homeTeam={teamById.get(match.homeTeamId)}
+                  awayTeam={teamById.get(match.awayTeamId)}
+                  prediction={myPredictions.get(match.id)}
+                  draft={drafts[match.id]}
+                  onDraftChange={(matchId, draft) => setDrafts((current) => ({ ...current, [matchId]: draft }))}
+                  hasPaid={hasPaid}
+                  currentMatchday={currentMatchday}
+                  now={now}
+                />
+              ))}
+            </section>
+          ))
+        )}
+      </div>
+
+      {/* Barra de guardado: solo aparece cuando hay algo pendiente de enviar. */}
+      {pending.length > 0 ? (
+        <div className="safe-bottom fixed inset-x-0 bottom-[4.75rem] z-30 px-4">
+          <div className="mx-auto max-w-lg">
+            <button type="button" onClick={save} disabled={saving} className="btn-primary w-full shadow-lift">
+              {saving ? (
+                <Spinner label="Guardando" />
+              ) : (
+                <>
+                  <Check size={17} aria-hidden="true" />
+                  Guardar {pending.length} {pending.length === 1 ? 'apuesta' : 'apuestas'}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}

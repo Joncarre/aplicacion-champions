@@ -1,0 +1,155 @@
+@import 'tailwindcss';
+
+/*
+ * Sistema de diseño de la porra. Tema oscuro único: la app se usa de noche,
+ * en el móvil y con partidos de por medio.
+ */
+@theme {
+  /* Fondos, de más profundo a más elevado */
+  --color-base: #07080d;
+  --color-surface: #0d0f17;
+  --color-raised: #141826;
+  --color-overlay: #1b2032;
+  --color-line: #242a3c;
+  --color-line-soft: #1a1f2e;
+
+  /* Texto */
+  --color-ink: #eef1f7;
+  --color-ink-soft: #a7aec4;
+  --color-ink-mute: #6f7791;
+
+  /* Acentos */
+  --color-brand: #4d7cff;
+  --color-brand-soft: #8fabff;
+  --color-brand-deep: #1f3a8a;
+  --color-gold: #e6c86e;
+  --color-gold-deep: #6b5518;
+
+  /* Estados */
+  --color-exact: #38d6a4;
+  --color-sign: #f2b544;
+  --color-miss: #f2545b;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  --radius-card: 1rem;
+
+  --shadow-lift: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.8);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    /* Sin rebote de scroll horizontal en móvil. */
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-base);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv05', 'ss01';
+    overscroll-behavior-y: none;
+    min-height: 100dvh;
+  }
+
+  /* El foco tiene que verse: se navega con teclado y con lector de pantalla. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-soft);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* Los inputs numéricos de la porra no necesitan flechas. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  /* Entrada de página al cambiar de pestaña. */
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/*
+ * Tailwind v4 solo deja hacer @apply de utilidades registradas, así que las
+ * piezas reutilizables se declaran con @utility en vez de como clases sueltas.
+ */
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold;
+  @apply transition-[transform,background-color,opacity] duration-150 active:scale-[0.98];
+  @apply disabled:pointer-events-none disabled:opacity-45;
+}
+
+@utility card {
+  @apply rounded-2xl border border-line bg-surface;
+}
+
+@utility field {
+  @apply w-full rounded-xl border border-line bg-raised px-4 py-3 text-base text-ink;
+  @apply placeholder:text-ink-mute transition-colors;
+}
+
+/* Respeta la zona segura de los móviles con notch o barra gestual. */
+@utility animate-page {
+  animation: page-enter 280ms cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+@utility safe-top {
+  padding-top: max(env(safe-area-inset-top), 0.5rem);
+}
+
+@layer components {
+  .field:focus {
+    @apply border-brand outline-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand/90;
+  }
+
+  .btn-ghost {
+    @apply btn border border-line bg-raised text-ink hover:bg-overlay;
+  }
+
+  .btn-quiet {
+    @apply btn text-ink-soft hover:text-ink;
+  }
+}
