@@ -74,32 +74,32 @@ describe('namesMatch', () => {
 describe('scoreExtras', () => {
   const config: TournamentConfig = {
     actualTopScorer: 'Kylian Mbappé',
-    actualChampionTeamId: 'real-madrid',
+    actualChampion: 'Real Madrid',
     currentMatchdayOverride: null,
     entryFee: 10,
   }
-  const extras = (topScorer: string, championTeamId: string | null) => ({
+  const extras = (topScorer: string, champion: string) => ({
     userId: 'u',
     topScorer,
-    championTeamId,
+    champion,
     updatedAt: 0,
   })
 
   it('suma 25 y 50 por acertar goleador y campeón', () => {
-    const result = scoreExtras(extras('Mbappé', 'real-madrid'), config)
+    const result = scoreExtras(extras('Mbappé', 'Real Madrid'), config)
     expect(result.points).toBe(POINTS.topScorer + POINTS.champion)
     expect(result.topScorerHit).toBe(true)
     expect(result.championHit).toBe(true)
   })
 
   it('puntúa cada acierto por separado', () => {
-    expect(scoreExtras(extras('Haaland', 'real-madrid'), config).points).toBe(50)
-    expect(scoreExtras(extras('Mbappé', 'barcelona'), config).points).toBe(25)
+    expect(scoreExtras(extras('Haaland', 'Real Madrid'), config).points).toBe(50)
+    expect(scoreExtras(extras('Mbappé', 'FC Barcelona'), config).points).toBe(25)
   })
 
   it('no puntúa mientras el admin no haya fijado los aciertos', () => {
-    const sinResultado = { ...config, actualTopScorer: null, actualChampionTeamId: null }
-    expect(scoreExtras(extras('Mbappé', 'real-madrid'), sinResultado).points).toBe(0)
+    const sinResultado = { ...config, actualTopScorer: null, actualChampion: null }
+    expect(scoreExtras(extras('Mbappé', 'Real Madrid'), sinResultado).points).toBe(0)
   })
 
   it('no puntúa a quien no apostó', () => {

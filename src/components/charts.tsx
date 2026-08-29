@@ -10,21 +10,41 @@ import type { EvolutionPoint } from '@/lib/standings'
  */
 
 const WIDTH = 320
-const HEIGHT = 150
-const PAD_X = 10
-const PAD_TOP = 14
+const HEIGHT = 158
+/** Hueco a la izquierda para las etiquetas del eje vertical. */
+const PAD_LEFT = 30
+const PAD_RIGHT = 10
+const PAD_TOP = 12
 const PAD_BOTTOM = 24
 
-const plotWidth = WIDTH - PAD_X * 2
+const plotWidth = WIDTH - PAD_LEFT - PAD_RIGHT
 const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM
 
 function xAt(index: number, count: number): number {
-  if (count <= 1) return PAD_X + plotWidth / 2
-  return PAD_X + (index / (count - 1)) * plotWidth
+  if (count <= 1) return PAD_LEFT + plotWidth / 2
+  return PAD_LEFT + (index / (count - 1)) * plotWidth
 }
 
 function toPath(coordinates: [number, number][]): string {
   return coordinates.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+}
+
+/**
+ * Marcas del eje vertical en valores redondos (10, 25, 50, 100…) en vez de en
+ * los números sueltos que salgan de los datos, que es lo que hace que un eje
+ * se lea de un vistazo.
+ */
+function axisTicks(max: number, intervals: number): number[] {
+  if (max <= 0) return [0]
+  const rough = max / intervals
+  const magnitude = 10 ** Math.floor(Math.log10(rough))
+  const normalized = rough / magnitude
+  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude
+  const top = Math.ceil(max / step) * step
+
+  const ticks: number[] = []
+  for (let value = 0; value <= top + step / 100; value += step) ticks.push(Math.round(value))
+  return ticks
 }
 
 /* ────────────────────────────── Puntos acumulados ────────────────────────────── */
@@ -38,14 +58,16 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
   const played = points.filter((point) => point.played)
   if (played.length === 0) return <ChartPlaceholder />
 
-  const ceiling = Math.max(1, ...played.map((point) => point.maxCumulative))
+  const ticks = axisTicks(Math.max(1, ...played.map((point) => point.maxCumulative)), 4)
+  const ceiling = ticks[ticks.length - 1] ?? 1
   const yAt = (value: number) => PAD_TOP + (1 - value / ceiling) * plotHeight
 
   const mine: [number, number][] = played.map((point, index) => [xAt(index, played.length), yAt(point.cumulative)])
   const best: [number, number][] = played.map((point, index) => [xAt(index, played.length), yAt(point.maxCumulative)])
   const last = played[played.length - 1]
 
-  const area = `${toPath(mine)} L${xAt(played.length - 1, played.length).toFixed(1)},${(PAD_TOP + plotHeight).toFixed(1)} L${PAD_X},${(PAD_TOP + plotHeight).toFixed(1)} Z`
+  const floor = (PAD_TOP + plotHeight).toFixed(1)
+  const area = `${toPath(mine)} L${xAt(played.length - 1, played.length).toFixed(1)},${floor} L${PAD_LEFT},${floor} Z`
 
   return (
     <figure className="card p-4">
@@ -62,14 +84,7 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
           </linearGradient>
         </defs>
 
-        <line
-          x1={PAD_X}
-          y1={PAD_TOP + plotHeight}
-          x2={WIDTH - PAD_X}
-          y2={PAD_TOP + plotHeight}
-          stroke="var(--color-line)"
-          strokeWidth="1"
-        />
+        <YAxis ticks={ticks} yAt={yAt} />
 
         <path d={toPath(best)} fill="none" stroke="var(--color-line)" strokeWidth="1.5" strokeDasharray="3 4" />
         <path d={area} fill={`url(#${gradientId})`} />
@@ -94,7 +109,7 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
           />
         ))}
 
-        <AxisLabels points={played} />
+        <XAxis points={played} />
       </svg>
 
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-mute">
@@ -107,13 +122,21 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 
 /* ────────────────────────────── Distancia con el líder ────────────────────────────── */
 
-/** Cuántos puntos te sacaba el primero al cerrar cada jornada. */
+/**
+ * Cuántos puntos te sacaba el primero al cerrar cada jornada. El eje va hacia
+ * abajo, así que las barras cuelgan del cero: cuanto más largas, más lejos.
+ */
 export function GapChart({ points }: { points: EvolutionPoint[] }) {
   const played = points.filter((point) => point.played)
   if (played.length === 0) return <ChartPlaceholder />
 
-  const worst = Math.min(-1, ...played.map((point) => point.gapToLeader))
-  const barWidth = Math.min(28, (plotWidth / played.length) * 0.6)
+  const worst = Math.max(1, ...played.map((point) => Math.abs(point.gapToLeader)))
+  const ticks = axisTicks(worst, 3)
+  const depth = ticks[ticks.length - 1] ?? 1
+  // El cero está arriba y los valores crecen hacia abajo.
+  const yAt = (value: number) => PAD_TOP + (Math.abs(value) / depth) * plotHeight
+
+  const barWidth = Math.min(26, (plotWidth / played.length) * 0.55)
   const last = played[played.length - 1]
 
   return (
@@ -131,47 +154,38 @@ export function GapChart({ points }: { points: EvolutionPoint[] }) {
           .map((point) => `jornada ${point.matchday}, ${point.gapToLeader}`)
           .join('; ')}`}
       >
+        <YAxis ticks={ticks} yAt={yAt} format={(value) => (value === 0 ? '0' : `−${value}`)} />
+
+        {played.map((point, index) => {
+          const height = yAt(point.gapToLeader) - PAD_TOP
+          const leader = point.gapToLeader === 0
+
+          return (
+            <rect
+              key={point.matchday}
+              x={xAt(index, played.length) - barWidth / 2}
+              y={PAD_TOP}
+              width={barWidth}
+              height={Math.max(3, height)}
+              rx="3"
+              fill={leader ? 'var(--color-gold)' : 'var(--color-brand)'}
+              opacity={leader ? 1 : 0.6}
+            />
+          )
+        })}
+
+        {/* La línea del líder se pinta encima de las barras para que no se pierda. */}
         <line
-          x1={PAD_X}
+          x1={PAD_LEFT}
           y1={PAD_TOP}
-          x2={WIDTH - PAD_X}
+          x2={WIDTH - PAD_RIGHT}
           y2={PAD_TOP}
           stroke="var(--color-gold)"
           strokeWidth="1.5"
           strokeDasharray="3 4"
         />
 
-        {played.map((point, index) => {
-          const height = (Math.abs(point.gapToLeader) / Math.abs(worst)) * plotHeight
-          const x = xAt(index, played.length) - barWidth / 2
-          const leader = point.gapToLeader === 0
-
-          return (
-            <g key={point.matchday}>
-              <rect
-                x={x}
-                y={PAD_TOP}
-                width={barWidth}
-                height={Math.max(leader ? 3 : 4, height)}
-                rx="3"
-                fill={leader ? 'var(--color-gold)' : 'var(--color-brand)'}
-                opacity={leader ? 1 : 0.55}
-              />
-              {!leader ? (
-                <text
-                  x={xAt(index, played.length)}
-                  y={PAD_TOP + Math.max(4, height) + 11}
-                  textAnchor="middle"
-                  className="fill-[var(--color-ink-mute)] text-[9px]"
-                >
-                  {point.gapToLeader}
-                </text>
-              ) : null}
-            </g>
-          )
-        })}
-
-        <AxisLabels points={played} />
+        <XAxis points={played} />
       </svg>
 
       <figcaption className="mt-2 text-[11px] text-ink-mute">
@@ -295,7 +309,46 @@ function ChartHeading({ title, detail }: { title: string; detail: string }) {
   )
 }
 
-function AxisLabels({ points }: { points: EvolutionPoint[] }) {
+/** Eje vertical con sus líneas de referencia y sus etiquetas. */
+function YAxis({
+  ticks,
+  yAt,
+  format = String,
+}: {
+  ticks: number[]
+  yAt: (value: number) => number
+  format?: (value: number) => string
+}) {
+  return (
+    <>
+      {ticks.map((tick) => {
+        const y = yAt(tick)
+        return (
+          <g key={tick}>
+            <line
+              x1={PAD_LEFT}
+              y1={y}
+              x2={WIDTH - PAD_RIGHT}
+              y2={y}
+              stroke="var(--color-line-soft)"
+              strokeWidth="1"
+            />
+            <text
+              x={PAD_LEFT - 6}
+              y={y + 3}
+              textAnchor="end"
+              className="fill-[var(--color-ink-mute)] font-mono text-[9px]"
+            >
+              {format(tick)}
+            </text>
+          </g>
+        )
+      })}
+    </>
+  )
+}
+
+function XAxis({ points }: { points: EvolutionPoint[] }) {
   return (
     <>
       {points.map((point, index) => (
@@ -304,7 +357,7 @@ function AxisLabels({ points }: { points: EvolutionPoint[] }) {
           x={xAt(index, points.length)}
           y={HEIGHT - 6}
           textAnchor="middle"
-          className="fill-[var(--color-ink-mute)] text-[9px]"
+          className="fill-[var(--color-ink-mute)] font-mono text-[9px]"
         >
           J{point.matchday}
         </text>

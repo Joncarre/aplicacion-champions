@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { useDemoBackend } from '@/services/backend'
 import { Alert, Field } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
@@ -86,13 +85,6 @@ export default function Login() {
             {saving ? <Spinner label="Entrando" /> : 'Entrar'}
           </button>
         </form>
-
-        {useDemoBackend ? (
-          <Alert tone="info" className="mt-6">
-            Modo demo: entra con <strong>joncarre</strong> y la contraseña <strong>champions</strong> para ver el
-            panel de administración, o con <strong>lucia</strong> para ver la app como participante.
-          </Alert>
-        ) : null}
 
         <p className="mt-6 text-center text-sm text-ink-mute">
           ¿Todavía no tienes cuenta?{' '}

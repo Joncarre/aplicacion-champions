@@ -4,9 +4,10 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
-import { resetDemoData } from './services/demoBackend'
-import { recomputeScores } from './services/scores'
+import { DEMO_NICKNAMES, DEMO_UNPAID, resetDemoData } from './services/demoBackend'
 import { clearSession } from './services/session'
+import { factOfTheDay } from './data/facts'
+import { now } from './lib/clock'
 
 /**
  * Prueba de humo de la interfaz. Monta la aplicación de verdad sobre el
@@ -39,10 +40,12 @@ async function loginAs(nickname: string) {
 }
 
 describe('la aplicación', () => {
+  // Se siembra y nada más: sin recalcular a mano, igual que lo ve un usuario al
+  // abrir la aplicación. Si la semilla no dejara las puntuaciones hechas, la
+  // clasificación saldría a cero y el perfil sin gráficas.
   beforeEach(async () => {
     clearSession()
     await resetDemoData()
-    await recomputeScores()
   })
 
   it('da la bienvenida con los dos accesos y el crédito a GitHub', async () => {
@@ -51,7 +54,10 @@ describe('la aplicación', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/porra de la\s*champions/i)
     expect(screen.getByRole('link', { name: 'Crear cuenta' })).toHaveAttribute('href', '/registro')
     expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toHaveAttribute('href', '/login')
-    expect(screen.getByRole('link', { name: /@joncarre/ })).toHaveAttribute('href', 'https://github.com/joncarre')
+    expect(screen.getByRole('link', { name: /Jonathan Carrero/ })).toHaveAttribute(
+      'href',
+      'https://github.com/joncarre',
+    )
   })
 
   it('crea una cuenta y avisa de que ha ido bien', async () => {
@@ -117,9 +123,9 @@ describe('la aplicación', () => {
 
     expect(await screen.findByRole('heading', { name: 'Clasificación' })).toBeTruthy()
 
-    // Los seis participantes de prueba, y quien mira aparece marcado como «tú».
-    const rows = await screen.findAllByText(/^(joncarre|lucia|dani|marta|pablo|noa)$/)
-    expect(rows).toHaveLength(6)
+    // Todos los participantes de prueba, y quien mira aparece marcado como «tú».
+    const nicknames = new RegExp('^(' + DEMO_NICKNAMES.join('|') + ')$')
+    expect(await screen.findAllByText(nicknames)).toHaveLength(DEMO_NICKNAMES.length)
     expect(screen.getByText('tú')).toBeTruthy()
   })
 
@@ -186,11 +192,12 @@ describe('la aplicación', () => {
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
 
     expect(await screen.findByRole('heading', { name: 'Perfil' })).toBeTruthy()
-    expect(screen.getByText('Porra pagada')).toBeTruthy()
+    expect(screen.getByText('Pagado')).toBeTruthy()
     expect(screen.getByText(/miembro desde el/i)).toBeTruthy()
 
-    // Una cita entre comillas con el dato del día.
-    expect(screen.getByText(/^“.+”$/)).toBeTruthy()
+    // La curiosidad del día, que es la misma para todos y cambia cada jornada.
+    expect(screen.getByText(/dato del día/i)).toBeVisible()
+    expect(screen.getByText(factOfTheDay(now()))).toBeVisible()
 
     // Las tres gráficas de evolución.
     expect(screen.getByRole('img', { name: /puntos acumulados por jornada/i })).toBeTruthy()
@@ -213,9 +220,8 @@ describe('la aplicación', () => {
     await user.click(await screen.findByRole('link', { name: /admin/i }))
 
     expect(await screen.findByRole('heading', { name: 'Administración' })).toBeTruthy()
-    // Noa es la única que aparece como pendiente de pago.
     const pendientes = await screen.findAllByRole('button', { name: 'Sin pagar' })
-    expect(pendientes).toHaveLength(1)
+    expect(pendientes).toHaveLength(DEMO_UNPAID.length)
 
     await user.click(pendientes[0]!)
     await waitFor(() => expect(screen.queryAllByRole('button', { name: 'Sin pagar' })).toHaveLength(0))

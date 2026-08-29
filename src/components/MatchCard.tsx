@@ -49,6 +49,7 @@ export function MatchCard({
 
   const scored = finished && prediction ? outcomeOf(prediction, match) : null
   const points = scored ? pointsForOutcome(scored) : null
+  const empty = value.home === '' || value.away === ''
 
   const update = (side: 'home' | 'away') => (raw: string) => {
     // Un solo dígito por marcador: nadie va a apostar un 12-0.
@@ -68,24 +69,40 @@ export function MatchCard({
         <TeamRow team={awayTeam} fallback={match.awayTeamId} goals={match.awayGoals} winner={isWinner(match, 'away')} />
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-line-soft bg-raised/40 px-4 py-3">
-        <span className="text-xs font-medium text-ink-mute">Tu apuesta</span>
+      {/* Zona de apuesta: se separa del resultado real con su propio fondo. */}
+      <div
+        className={[
+          'flex items-center justify-between gap-3 border-t px-4 py-3 transition-colors',
+          editable && empty ? 'border-brand/25 bg-brand/8' : 'border-line-soft bg-raised/50',
+        ].join(' ')}
+      >
+        <span
+          className={[
+            'text-xs font-semibold',
+            editable && empty ? 'text-brand-soft' : 'text-ink-mute',
+          ].join(' ')}
+        >
+          Tu apuesta
+        </span>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {scored ? (
-            <span className={`rounded-md px-2 py-1 text-[11px] font-bold ${OUTCOME_STYLES[scored].chip}`}>
+            <span
+              title={OUTCOME_STYLES[scored].label}
+              className={`rounded-md px-2 py-1 font-mono text-[11px] font-bold ${OUTCOME_STYLES[scored].chip}`}
+            >
               {points === 0 ? '0 pts' : `+${points} pts`}
             </span>
           ) : null}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <ScoreInput
               value={value.home}
               onChange={update('home')}
               editable={editable}
               label={`Goles de ${homeTeam?.name ?? 'local'}`}
             />
-            <span aria-hidden="true" className="text-ink-mute">
+            <span aria-hidden="true" className="font-mono text-ink-mute">
               –
             </span>
             <ScoreInput
@@ -113,7 +130,7 @@ function MatchStatus({
   finished: boolean
 }) {
   if (finished) {
-    return <span className="text-[11px] font-bold tracking-wide text-ink-mute uppercase">Final</span>
+    return <span className="text-[11px] font-bold tracking-wide text-ink-mute uppercase">Finalizado</span>
   }
   if (now >= match.kickoff) {
     return (
@@ -125,7 +142,7 @@ function MatchStatus({
   }
   if (lock === null) {
     return (
-      <span className="text-[11px] font-medium text-brand-soft">
+      <span className="font-mono text-[11px] font-medium text-brand-soft">
         Cierra en {formatCountdown(match.kickoff - now)}
       </span>
     )
@@ -150,13 +167,10 @@ function TeamRow({
   winner: boolean
 }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-3">
       <span
-        aria-hidden="true"
-        className="h-6 w-1 shrink-0 rounded-full"
-        style={{ backgroundColor: team?.color ?? 'var(--color-line)' }}
-      />
-      <span className={`min-w-0 flex-1 truncate text-[15px] ${winner ? 'font-semibold text-ink' : 'text-ink-soft'}`}>
+        className={`min-w-0 flex-1 truncate font-mono text-sm ${winner ? 'font-bold text-ink' : 'text-ink-soft'}`}
+      >
         {team?.name ?? fallback}
       </span>
       <span
@@ -185,7 +199,7 @@ function ScoreInput({
     return (
       <span
         aria-label={`${label}: ${value || 'sin apostar'}`}
-        className="grid size-11 place-items-center rounded-lg border border-line-soft bg-surface font-mono text-base tabular-nums text-ink-soft"
+        className="grid size-12 place-items-center rounded-xl border border-line-soft bg-surface font-mono text-lg tabular-nums text-ink-soft"
       >
         {value === '' ? '–' : value}
       </span>
@@ -203,8 +217,12 @@ function ScoreInput({
       onChange={(event) => onChange(event.target.value)}
       onFocus={(event) => event.target.select()}
       placeholder="–"
-      className="size-11 rounded-lg border border-line bg-raised text-center font-mono text-base tabular-nums text-ink
-                 transition-colors placeholder:text-ink-mute focus:border-brand focus:outline-none"
+      className={[
+        'size-12 rounded-xl border-2 bg-base text-center font-mono text-lg font-bold tabular-nums text-ink',
+        'transition-colors placeholder:font-normal placeholder:text-ink-mute',
+        'focus:border-brand focus:outline-none',
+        value === '' ? 'border-brand/40' : 'border-line',
+      ].join(' ')}
     />
   )
 }

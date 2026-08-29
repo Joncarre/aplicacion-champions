@@ -91,10 +91,8 @@ demostración** en el panel de administración (pestaña *Calendario*) para volv
 
 6. **Registrarte** en la aplicación con el nickname que hayas puesto en `VITE_ADMIN_NICKNAME`. Ese usuario recibe el
    panel de administración automáticamente.
-7. **Sembrar la competición**: entra en `Perfil` → `Admin` → pestaña *Calendario* → **Equipos y calendario por
-   defecto**. Eso crea los 36 equipos y los 144 partidos.
-8. **Sustituir los equipos** por los clasificados reales cuando la UEFA los publique (pestaña *Equipos*) y después
-   pulsar **Regenerar calendario**.
+7. **Sembrar la competición**: entra en `Perfil` → `Admin` → pestaña *Calendario* → **Equipos y calendario
+   oficiales**. Eso crea los 36 equipos del sorteo y los 144 partidos con sus horarios.
 
 ### Desplegar
 
@@ -145,10 +143,15 @@ Las apuestas de **máximo goleador y campeón** (en el perfil) se cierran el 8 d
 | 7       | 19–20 ene 2027     |
 | 8       | 27 ene 2027        |
 
-Los horarios que ves son de relleno hasta que la UEFA publique los definitivos: se reparten entre las 18:45 y las
-21:00 de cada día, con la última jornada entera en simultáneo. Se pueden corregir uno a uno en el panel de
-administración. Todo se guarda como instante absoluto y se muestra en hora de Madrid, así que los cambios de
-horario de verano salen bien solos.
+Los 144 enfrentamientos y sus horarios son los oficiales, transcritos en [`src/data/fixtures.ts`](src/data/fixtures.ts).
+Si la UEFA mueve algún partido, se corrige uno a uno desde el panel de administración sin tocar el resto.
+
+Todo se guarda como instante absoluto y se muestra en hora de Madrid, así que el cambio de horario sale bien solo:
+las jornadas 1 a 3 se juegan en CEST (UTC+2) y de la 4 en adelante en CET (UTC+1).
+
+El calendario está cubierto por [`fixtures.test.ts`](src/data/fixtures.test.ts), que comprueba las reglas del
+formato de fase liga: 36 equipos jugando una vez por jornada, 8 rivales distintos cada uno, 4 partidos en casa y 4
+fuera, y ningún emparejamiento repetido. Cualquier errata al transcribir rompe alguna de esas comprobaciones.
 
 Fase eliminatoria (la pantalla de *Cruces* todavía está pendiente): play-offs el 16/17 y 23/24 de febrero de 2027,
 octavos el 9/10 y 16/17 de marzo, cuartos el 6/7 y 13/14 de abril, semifinales el 27/28 de abril y 4/5 de mayo, y

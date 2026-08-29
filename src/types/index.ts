@@ -59,13 +59,14 @@ export interface Extras {
   userId: string
   /** Texto libre: el nombre del jugador tal y como lo escribe el usuario. */
   topScorer: string
-  championTeamId: string | null
+  /** Texto libre también: el nombre del equipo campeón. */
+  champion: string
   updatedAt: number
 }
 
 export interface TournamentConfig {
   actualTopScorer: string | null
-  actualChampionTeamId: string | null
+  actualChampion: string | null
   /** Si el admin quiere forzar qué jornada está abierta. null = se deduce del calendario. */
   currentMatchdayOverride: number | null
   /** Cuota por participante, en euros. */

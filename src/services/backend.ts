@@ -50,7 +50,7 @@ export interface Backend {
 
 export const DEFAULT_CONFIG: TournamentConfig = {
   actualTopScorer: null,
-  actualChampionTeamId: null,
+  actualChampion: null,
   currentMatchdayOverride: null,
   entryFee: 10,
 }

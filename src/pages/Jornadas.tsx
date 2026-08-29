@@ -118,6 +118,7 @@ export default function Jornadas() {
   }
 
   const isOpenMatchday = matchday === currentMatchday
+  const showSaveBar = isOpenMatchday && hasPaid && !loading && matches.length > 0
 
   return (
     <>
@@ -147,7 +148,7 @@ export default function Jornadas() {
         {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
         {isOpenMatchday && hasPaid && missing > 0 ? (
-          <Alert tone="info">
+          <Alert tone="pending">
             Te faltan {missing} {missing === 1 ? 'partido' : 'partidos'} por apostar en esta jornada.
           </Alert>
         ) : null}
@@ -199,17 +200,39 @@ export default function Jornadas() {
         )}
       </div>
 
-      {/* Barra de guardado: solo aparece cuando hay algo pendiente de enviar. */}
-      {pending.length > 0 ? (
-        <div className="safe-bottom fixed inset-x-0 bottom-[4.75rem] z-30 px-4">
+      {/* Deja hueco para que la barra de guardado no tape el último partido. */}
+      {showSaveBar ? <div aria-hidden="true" className="h-20" /> : null}
+
+      {/*
+        Barra de guardado. Se queda siempre a la vista mientras la jornada esté
+        abierta, aunque no haya nada pendiente: así se sabe que las apuestas
+        hay que guardarlas y cuándo están a salvo.
+      */}
+      {showSaveBar ? (
+        <div className="safe-bottom fixed inset-x-0 bottom-[5.75rem] z-30 px-4">
           <div className="mx-auto max-w-lg">
-            <button type="button" onClick={save} disabled={saving} className="btn-primary w-full shadow-lift">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving || pending.length === 0}
+              className={[
+                'btn w-full shadow-lift',
+                pending.length > 0
+                  ? 'bg-brand text-white'
+                  : 'border border-exact/30 bg-exact/12 text-exact',
+              ].join(' ')}
+            >
               {saving ? (
                 <Spinner label="Guardando" />
-              ) : (
+              ) : pending.length > 0 ? (
                 <>
                   <Check size={17} aria-hidden="true" />
                   Guardar {pending.length} {pending.length === 1 ? 'apuesta' : 'apuestas'}
+                </>
+              ) : (
+                <>
+                  <Check size={17} aria-hidden="true" />
+                  Todo guardado
                 </>
               )}
             </button>

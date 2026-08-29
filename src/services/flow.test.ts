@@ -8,7 +8,7 @@ import { buildChampionsStandings } from '@/lib/standings'
 import { getBackend } from './backend'
 import { login, register } from './auth'
 import { recomputeScores } from './scores'
-import { resetDemoData } from './demoBackend'
+import { DEMO_NICKNAMES, resetDemoData } from './demoBackend'
 
 /**
  * Prueba de extremo a extremo sobre el backend de demostración: registro,
@@ -37,6 +37,19 @@ describe('recorrido completo de la porra', () => {
     const jugadas = matches.filter((m) => m.homeGoals !== null)
     expect(jugadas.length).toBe(6 * MATCHES_PER_MATCHDAY)
     expect(resolveCurrentMatchday(matches, now())).toBe(7)
+  })
+
+  it('deja las puntuaciones listas nada más sembrar, sin recalcular', async () => {
+    // Si la semilla dejara `scores` vacío, la clasificación saldría a cero y
+    // el perfil no pintaría ninguna gráfica hasta que el admin recalculase.
+    const backend = await getBackend()
+    const scores = await backend.listScores()
+
+    expect(scores).toHaveLength(DEMO_NICKNAMES.length)
+    expect(scores.filter((score) => score.totalPoints > 0).length).toBeGreaterThan(3)
+    // Y con seis jornadas jugadas, el desglose por jornada también está.
+    const lucia = scores.find((score) => score.userId === 'lucia')
+    expect(lucia?.matchdays.filter((m) => m.resolved > 0)).toHaveLength(6)
   })
 
   it('registra un usuario nuevo, que entra sin pagar y sin puntos', async () => {
@@ -137,13 +150,13 @@ describe('recorrido completo de la porra', () => {
     await backend.saveExtras({
       userId: 'ana',
       topScorer: 'Haaland',
-      championTeamId: 'liverpool',
+      champion: 'Liverpool',
       updatedAt: now(),
     })
 
     expect((await recomputeScores()).find((s) => s.userId === 'ana')?.extraPoints).toBe(0)
 
-    await backend.saveConfig({ actualTopScorer: 'Erling Haaland', actualChampionTeamId: 'liverpool' })
+    await backend.saveConfig({ actualTopScorer: 'Erling Haaland', actualChampion: 'Liverpool FC' })
     const ana = (await recomputeScores()).find((s) => s.userId === 'ana')
     expect(ana).toMatchObject({ extraPoints: 75, topScorerHit: true, championHit: true })
   })
@@ -192,7 +205,7 @@ describe('recorrido completo de la porra', () => {
         updatedAt: now(),
       },
     ])
-    await backend.saveExtras({ userId: 'ana', topScorer: 'X', championTeamId: null, updatedAt: now() })
+    await backend.saveExtras({ userId: 'ana', topScorer: 'X', champion: '', updatedAt: now() })
 
     await backend.deleteUser('ana')
 

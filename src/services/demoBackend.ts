@@ -1,9 +1,10 @@
 import type { Extras, Match, Prediction, Team, TournamentConfig, User, UserScore } from '@/types'
 import { DEFAULT_TEAMS } from '@/data/teams'
-import { generateFixtures } from '@/data/fixtures'
+import { buildOfficialMatches } from '@/data/fixtures'
 import { hashPassword, randomSalt } from '@/lib/crypto'
 import { now } from '@/lib/clock'
 import { madridToUtc } from '@/lib/date'
+import { computeUserScore } from '@/lib/standings'
 import { BackendError, DEFAULT_CONFIG, type Backend } from './backend'
 
 /**
@@ -16,7 +17,9 @@ import { BackendError, DEFAULT_CONFIG, type Backend } from './backend'
  * exactamente como se vería ese día.
  */
 
-const PREFIX = 'porra-champions:demo:v1'
+// Al subir esta versión, los navegadores que tuvieran datos viejos se
+// resiembran solos.
+const PREFIX = 'porra-champions:demo:v5'
 const key = (collection: string) => `${PREFIX}:${collection}`
 
 const DEMO_PASSWORD = 'champions'
@@ -33,12 +36,22 @@ interface DemoProfile {
 
 const DEMO_PROFILES: DemoProfile[] = [
   { nickname: 'joncarre', nombre: 'Jonathan', apellidos: 'Carrero', isAdmin: true, hasPaid: true, skill: 0.55 },
-  { nickname: 'lucia', nombre: 'Lucía', apellidos: 'Serrano Gil', isAdmin: false, hasPaid: true, skill: 0.7 },
+  { nickname: 'lucia', nombre: 'Lucía', apellidos: 'Serrano Gil', isAdmin: false, hasPaid: true, skill: 0.44 },
   { nickname: 'dani', nombre: 'Daniel', apellidos: 'Ortega Ruiz', isAdmin: false, hasPaid: true, skill: 0.5 },
   { nickname: 'marta', nombre: 'Marta', apellidos: 'Iglesias Nieto', isAdmin: false, hasPaid: true, skill: 0.62 },
   { nickname: 'pablo', nombre: 'Pablo', apellidos: 'Ferrer Navas', isAdmin: false, hasPaid: true, skill: 0.4 },
   { nickname: 'noa', nombre: 'Noa', apellidos: 'Requena Prat', isAdmin: false, hasPaid: false, skill: 0.45 },
+  { nickname: 'raquel', nombre: 'Raquel', apellidos: 'Antón Vega', isAdmin: false, hasPaid: true, skill: 0.72 },
+  { nickname: 'sergio', nombre: 'Sergio', apellidos: 'Bermejo Lara', isAdmin: false, hasPaid: true, skill: 0.58 },
+  { nickname: 'elena', nombre: 'Elena', apellidos: 'Vidal Campos', isAdmin: false, hasPaid: true, skill: 0.34 },
+  { nickname: 'javi', nombre: 'Javier', apellidos: 'Mendoza Arias', isAdmin: false, hasPaid: true, skill: 0.5 },
 ]
+
+/** Nicknames de prueba, para que los tests no dependan de una lista escrita a mano. */
+export const DEMO_NICKNAMES = DEMO_PROFILES.map((profile) => profile.nickname)
+
+/** Los que aún no han pagado, que es lo que el admin tiene que marcar. */
+export const DEMO_UNPAID = DEMO_PROFILES.filter((profile) => !profile.hasPaid).map((p) => p.nickname)
 
 function read<T>(collection: string, fallback: T): T {
   try {
@@ -165,7 +178,7 @@ async function seed(): Promise<void> {
   if (localStorage.getItem(key('seeded')) === '1') return
 
   const teams = DEFAULT_TEAMS
-  const matches = generateFixtures(teams)
+  const matches = buildOfficialMatches()
   const random = mulberry32(20262027)
 
   // Solo se rellenan los resultados de los partidos que ya se han jugado.
@@ -221,10 +234,30 @@ async function seed(): Promise<void> {
     extras.push({
       userId: profile.nickname,
       topScorer: pick(['Kylian Mbappé', 'Erling Haaland', 'Vinícius Júnior', 'Harry Kane', 'Lamine Yamal'], random),
-      championTeamId: pick(teams, random).id,
+      champion: pick(teams, random).name,
       updatedAt: madridToUtc('2026-09-06T20:00'),
     })
   }
+
+  // Las puntuaciones se dejan ya calculadas: si no, la clasificación y las
+  // gráficas del perfil aparecerían a cero hasta que el admin recalculase.
+  const predictionsByUser = new Map<string, Prediction[]>()
+  for (const prediction of predictions) {
+    const bucket = predictionsByUser.get(prediction.userId)
+    if (bucket) bucket.push(prediction)
+    else predictionsByUser.set(prediction.userId, [prediction])
+  }
+  const extrasByUser = new Map(extras.map((entry) => [entry.userId, entry]))
+
+  const scores = users.map((user) =>
+    computeUserScore({
+      userId: user.id,
+      predictions: predictionsByUser.get(user.id) ?? [],
+      matches: played,
+      extras: extrasByUser.get(user.id),
+      config: DEFAULT_CONFIG,
+    }),
+  )
 
   write('teams', teams)
   write('matches', played)
@@ -232,7 +265,7 @@ async function seed(): Promise<void> {
   write('predictions', predictions)
   write('extras', extras)
   write('config', DEFAULT_CONFIG)
-  write('scores', [])
+  write('scores', scores)
   localStorage.setItem(key('seeded'), '1')
 }
 

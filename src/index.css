@@ -27,6 +27,8 @@
 
   /* Estados */
   --color-exact: #38d6a4;
+  /* Naranja pastel para los avisos que no son un problema, solo un recordatorio. */
+  --color-pending: #f4b183;
   --color-sign: #f2b544;
   --color-miss: #f2545b;
 
@@ -152,4 +154,69 @@
   .btn-quiet {
     @apply btn text-ink-soft hover:text-ink;
   }
+}
+
+/*
+ * Borde animado para señalar la fila del usuario que está mirando la
+ * clasificación. Un degradado cónico gira despacio alrededor de la tarjeta:
+ * el truco está en pintar el relleno con `padding-box` y el degradado con
+ * `border-box`, de modo que solo asome por el borde.
+ */
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-border {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+@utility card-live {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    conic-gradient(
+        from var(--border-angle),
+        color-mix(in oklab, #9ec5fe 12%, transparent) 0deg,
+        color-mix(in oklab, #9ec5fe 12%, transparent) 190deg,
+        color-mix(in oklab, #9ec5fe 55%, transparent) 265deg,
+        #a9cdfd 305deg,
+        color-mix(in oklab, #9ec5fe 55%, transparent) 340deg,
+        color-mix(in oklab, #9ec5fe 12%, transparent) 360deg
+      )
+      border-box;
+  animation: spin-border 7s linear infinite;
+}
+
+/*
+ * Misma idea que `card-live`, pero en dorado, más grueso y bastante más lento:
+ * el dato del día no compite por la atención, solo respira.
+ */
+@utility card-live-gold {
+  position: relative;
+  border: 3px solid transparent;
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(
+        135deg,
+        color-mix(in oklab, var(--color-gold) 6%, var(--color-surface)),
+        var(--color-surface) 60%
+      )
+      padding-box,
+    conic-gradient(
+        from var(--border-angle),
+        color-mix(in oklab, var(--color-gold) 14%, transparent) 0deg,
+        color-mix(in oklab, var(--color-gold) 14%, transparent) 180deg,
+        color-mix(in oklab, var(--color-gold) 50%, transparent) 260deg,
+        var(--color-gold) 305deg,
+        color-mix(in oklab, var(--color-gold) 50%, transparent) 345deg,
+        color-mix(in oklab, var(--color-gold) 14%, transparent) 360deg
+      )
+      border-box;
+  animation: spin-border 14s linear infinite;
 }

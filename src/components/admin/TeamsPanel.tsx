@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Plus, RefreshCw, Trash2, Undo2 } from 'lucide-react'
+import { CalendarCheck, Plus, Shuffle, Trash2, Undo2 } from 'lucide-react'
 import type { Team } from '@/types'
 import { useData } from '@/context/DataContext'
-import { DEFAULT_TEAMS } from '@/data/teams'
-import { generateFixtures } from '@/data/fixtures'
-import { TEAM_COUNT } from '@/data/teams'
+import { DEFAULT_TEAMS, TEAM_COUNT } from '@/data/teams'
+import { buildOfficialMatches } from '@/data/fixtures'
+import { generateFixtures } from '@/data/fixtureGenerator'
 import { getBackend } from '@/services/backend'
 import { recomputeScores } from '@/services/scores'
 import { Alert } from '@/components/ui'
@@ -13,10 +13,10 @@ import { Spinner } from '@/components/Spinner'
 /**
  * Editor de los 36 participantes de la fase liga.
  *
- * La UEFA no publica los clasificados hasta finales de agosto, así que la lista
- * que viene por defecto es una semilla plausible que hay que sustituir por la
- * real. Cambiar la lista obliga a rehacer el calendario, porque los
- * emparejamientos se generan a partir de ella.
+ * La lista que viene por defecto es la del sorteo oficial de 2026/27, y el
+ * calendario de `fixtures.ts` se apoya en sus identificadores. Aquí se pueden
+ * retocar nombres, ligas y colores sin problema; añadir o quitar equipos, en
+ * cambio, deja el calendario oficial sin sentido y obliga a sortear uno nuevo.
  */
 export function TeamsPanel() {
   const { teams, matches, refresh } = useData()
@@ -26,6 +26,11 @@ export function TeamsPanel() {
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(teams), [draft, teams])
   const hasResults = matches.some((match) => match.homeGoals !== null)
+
+  /** Si alguien ha tocado la lista de equipos, el calendario oficial ya no encaja. */
+  const officialIds = useMemo(() => new Set(DEFAULT_TEAMS.map((team) => team.id)), [])
+  const matchesOfficialSquad =
+    teams.length === TEAM_COUNT && teams.every((team) => officialIds.has(team.id))
 
   const update = (index: number, patch: Partial<Team>) =>
     setDraft((current) => current.map((team, i) => (i === index ? { ...team, ...patch } : team)))
@@ -44,9 +49,22 @@ export function TeamsPanel() {
     ])
   }
 
+  async function run(work: () => Promise<void>, done: string) {
+    setBusy(true)
+    setFeedback(null)
+    try {
+      await work()
+      await refresh()
+      setFeedback({ tone: 'success', text: done })
+    } catch (cause) {
+      setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se ha podido completar' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function save() {
-    const incomplete = draft.some((team) => team.name.trim() === '')
-    if (incomplete) {
+    if (draft.some((team) => team.name.trim() === '')) {
       setFeedback({ tone: 'error', text: 'Hay equipos sin nombre' })
       return
     }
@@ -70,8 +88,8 @@ export function TeamsPanel() {
         tone: cleaned.length === TEAM_COUNT ? 'success' : 'warning',
         text:
           cleaned.length === TEAM_COUNT
-            ? 'Equipos guardados. Regenera el calendario para que los emparejamientos usen la lista nueva.'
-            : `Guardados ${cleaned.length} equipos. La fase liga necesita ${TEAM_COUNT} para poder generar las 8 jornadas.`,
+            ? 'Equipos guardados.'
+            : `Guardados ${cleaned.length} equipos. La fase liga necesita ${TEAM_COUNT}.`,
       })
     } catch (cause) {
       setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se han podido guardar' })
@@ -80,34 +98,16 @@ export function TeamsPanel() {
     }
   }
 
-  async function regenerate() {
-    if (
-      hasResults &&
-      !window.confirm('Se rehará el calendario con los equipos actuales y se perderán los resultados. ¿Sigo?')
-    ) {
-      return
-    }
-
-    setBusy(true)
-    setFeedback(null)
-    try {
-      const backend = await getBackend()
-      await backend.replaceMatches(generateFixtures(teams))
-      await recomputeScores()
-      await refresh()
-      setFeedback({ tone: 'success', text: 'Calendario regenerado con los equipos actuales' })
-    } catch (cause) {
-      setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se ha podido regenerar' })
-    } finally {
-      setBusy(false)
-    }
+  function confirmLosingResults(): boolean {
+    if (!hasResults) return true
+    return window.confirm('Se rehará el calendario y se perderán los resultados ya metidos. ¿Sigo?')
   }
 
   return (
     <div className="space-y-4">
       <Alert tone={draft.length === TEAM_COUNT ? 'info' : 'warning'}>
-        {draft.length} de {TEAM_COUNT} equipos. Sustituye esta lista por los clasificados reales en cuanto la UEFA los
-        publique y después regenera el calendario.
+        {draft.length} de {TEAM_COUNT} equipos. Son los del sorteo oficial: puedes corregir nombres, ligas y colores,
+        pero si añades o quitas alguno tendrás que sortear un calendario nuevo.
       </Alert>
 
       {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
@@ -116,17 +116,6 @@ export function TeamsPanel() {
         {draft.map((team, index) => (
           <li key={team.id} className="card p-3">
             <div className="flex items-start gap-2.5">
-              <label className="sr-only" htmlFor={`color-${team.id}`}>
-                Color de {team.name || 'el equipo'}
-              </label>
-              <input
-                id={`color-${team.id}`}
-                type="color"
-                value={team.color}
-                onChange={(event) => update(index, { color: event.target.value })}
-                className="mt-1 size-9 shrink-0 cursor-pointer rounded-lg border border-line bg-raised"
-              />
-
               <div className="min-w-0 flex-1 space-y-2">
                 <label className="sr-only" htmlFor={`name-${team.id}`}>
                   Nombre del equipo
@@ -195,33 +184,57 @@ export function TeamsPanel() {
         >
           <Undo2 size={15} aria-hidden="true" />
         </button>
-        <button
-          type="button"
-          onClick={() => setDraft(DEFAULT_TEAMS)}
-          disabled={busy}
-          className="btn-ghost px-3 text-xs"
-        >
-          Lista por defecto
+        <button type="button" onClick={() => setDraft(DEFAULT_TEAMS)} disabled={busy} className="btn-ghost px-3 text-xs">
+          Lista oficial
         </button>
       </div>
 
       <div className="card space-y-3 p-4">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Regenerar el calendario</h2>
+          <h2 className="text-sm font-semibold text-ink">Calendario</h2>
           <p className="mt-1 text-xs leading-relaxed text-ink-mute">
-            Vuelve a sortear las 8 jornadas con los equipos guardados: cada uno con 8 rivales distintos, 4 partidos en
-            casa y 4 fuera.
-            {hasResults ? ' Ojo: ya hay resultados metidos y se perderán.' : ''}
+            Lo normal es usar el calendario oficial de la UEFA, con sus 144 partidos y sus horarios. El sorteo
+            automático solo hace falta si has cambiado la lista de equipos.
+            {hasResults ? ' Ojo: ya hay resultados metidos y cualquiera de las dos opciones se los lleva por delante.' : ''}
           </p>
         </div>
+
         <button
           type="button"
-          onClick={regenerate}
-          disabled={busy || teams.length < 2 || dirty}
+          disabled={busy || dirty || !matchesOfficialSquad}
+          onClick={() => {
+            if (!confirmLosingResults()) return
+            void run(async () => {
+              const backend = await getBackend()
+              await backend.replaceMatches(buildOfficialMatches())
+              await recomputeScores()
+            }, 'Calendario oficial restaurado')
+          }}
+          className="btn-primary w-full text-xs"
+        >
+          <CalendarCheck size={15} aria-hidden="true" />
+          {dirty
+            ? 'Guarda los equipos primero'
+            : matchesOfficialSquad
+              ? 'Restaurar calendario oficial'
+              : 'No disponible: has cambiado los equipos'}
+        </button>
+
+        <button
+          type="button"
+          disabled={busy || dirty || teams.length < 2}
+          onClick={() => {
+            if (!confirmLosingResults()) return
+            void run(async () => {
+              const backend = await getBackend()
+              await backend.replaceMatches(generateFixtures(teams))
+              await recomputeScores()
+            }, 'Calendario sorteado con los equipos actuales')
+          }}
           className="btn-ghost w-full text-xs"
         >
-          <RefreshCw size={15} aria-hidden="true" />
-          {dirty ? 'Guarda los equipos primero' : 'Regenerar calendario'}
+          <Shuffle size={15} aria-hidden="true" />
+          Sortear calendario automático
         </button>
       </div>
     </div>

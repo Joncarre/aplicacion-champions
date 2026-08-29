@@ -87,7 +87,8 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.resource.data == null
                    || (request.resource.data.userId == userId
-                       && isString(request.resource.data.topScorer, 80));
+                       && isString(request.resource.data.topScorer, 80)
+                       && isString(request.resource.data.champion, 80));
     }
 
     match /scores/{userId} {

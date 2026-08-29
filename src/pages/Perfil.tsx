@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Camera, CircleCheck, CircleDashed, LogOut, Quote, Settings } from 'lucide-react'
+import { Camera, LogOut, Settings } from 'lucide-react'
 import type { Extras, PublicUser, Team } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
@@ -9,14 +9,14 @@ import { EXTRAS_DEADLINE } from '@/data/calendar'
 import { factOfTheDay } from '@/data/facts'
 import { formatFullDate } from '@/lib/date'
 import { areExtrasLocked } from '@/lib/locks'
-import { fileToAvatarDataUrl } from '@/lib/image'
+import { loadImage } from '@/lib/image'
 import { POINTS } from '@/lib/scoring'
 import { buildEvolution } from '@/lib/standings'
 import { getBackend } from '@/services/backend'
 import { Avatar } from '@/components/Avatar'
+import { AvatarEditor } from '@/components/AvatarEditor'
 import { CumulativeChart, GapChart, HitsDonut, StatTile } from '@/components/charts'
 import { Alert, Field, PageHeader } from '@/components/ui'
-import { Spinner } from '@/components/Spinner'
 
 export default function Perfil() {
   const { user, logout, refreshUser } = useAuth()
@@ -102,22 +102,38 @@ export default function Perfil() {
 
 function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: () => Promise<void> }) {
   const fileInput = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
+  const [editing, setEditing] = useState<HTMLImageElement | null>(null)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function onPick(file: File | undefined) {
     if (!file) return
-    setUploading(true)
     setError(null)
     try {
-      const photo = await fileToAvatarDataUrl(file)
+      setEditing(await loadImage(file))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se ha podido abrir la imagen')
+    }
+  }
+
+  function closeEditor() {
+    // La imagen se cargó desde un object URL: hay que soltarlo.
+    if (editing) URL.revokeObjectURL(editing.src)
+    setEditing(null)
+  }
+
+  async function confirm(dataUrl: string) {
+    setSaving(true)
+    setError(null)
+    try {
       const backend = await getBackend()
-      await backend.updateUser(user.id, { photo })
+      await backend.updateUser(user.id, { photo: dataUrl })
       await onPhotoSaved()
+      closeEditor()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se ha podido guardar la foto')
     } finally {
-      setUploading(false)
+      setSaving(false)
     }
   }
 
@@ -129,9 +145,8 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
-            disabled={uploading}
             aria-label="Cambiar foto de perfil"
-            className="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full border-2 border-surface bg-brand text-white transition-transform active:scale-95 disabled:opacity-60"
+            className="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full border-2 border-surface bg-brand text-white transition-transform active:scale-95"
           >
             <Camera size={15} aria-hidden="true" />
           </button>
@@ -148,7 +163,10 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-2xl leading-tight font-extrabold text-ink">{user.nickname}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="truncate font-display text-2xl leading-tight font-extrabold text-ink">{user.nickname}</p>
+            <PaymentBadge paid={user.hasPaid} />
+          </div>
           <p className="truncate text-sm text-ink-soft">
             {user.nombre} {user.apellidos}
           </p>
@@ -156,33 +174,31 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
         </div>
       </div>
 
-      {uploading ? (
-        <div className="mt-4">
-          <Spinner label="Subiendo la foto" />
-        </div>
-      ) : null}
       {error ? (
         <Alert tone="error" className="mt-4">
           {error}
         </Alert>
       ) : null}
 
-      <div
-        className={[
-          'mt-4 flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm',
-          user.hasPaid ? 'border-exact/30 bg-exact/8 text-exact' : 'border-sign/30 bg-sign/8 text-sign',
-        ].join(' ')}
-      >
-        {user.hasPaid ? (
-          <CircleCheck size={18} className="shrink-0" aria-hidden="true" />
-        ) : (
-          <CircleDashed size={18} className="shrink-0" aria-hidden="true" />
-        )}
-        <span className="font-medium">
-          {user.hasPaid ? 'Porra pagada' : 'Pendiente de pago: no puedes apostar todavía'}
-        </span>
-      </div>
+      {editing ? (
+        <AvatarEditor image={editing} saving={saving} onCancel={closeEditor} onConfirm={confirm} />
+      ) : null}
     </section>
+  )
+}
+
+/** Estado del pago, reducido a lo mínimo: un punto y una palabra. */
+function PaymentBadge({ paid }: { paid: boolean }) {
+  return (
+    <span
+      className={[
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold',
+        paid ? 'border-exact/30 bg-exact/10 text-exact' : 'border-sign/30 bg-sign/10 text-sign',
+      ].join(' ')}
+    >
+      <span aria-hidden="true" className={`size-1.5 rounded-full ${paid ? 'bg-exact' : 'bg-sign'}`} />
+      {paid ? 'Pagado' : 'Pendiente'}
+    </span>
   )
 }
 
@@ -199,11 +215,11 @@ interface SpecialBetsProps {
 function SpecialBets({ user, teams, extras, now, onSaved }: SpecialBetsProps) {
   const locked = areExtrasLocked(now)
   const [topScorer, setTopScorer] = useState(extras?.topScorer ?? '')
-  const [championTeamId, setChampionTeamId] = useState(extras?.championTeamId ?? '')
+  const [champion, setChampion] = useState(extras?.champion ?? '')
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
-  const dirty = topScorer.trim() !== (extras?.topScorer ?? '') || championTeamId !== (extras?.championTeamId ?? '')
+  const dirty = topScorer.trim() !== (extras?.topScorer ?? '') || champion.trim() !== (extras?.champion ?? '')
   const sortedTeams = useMemo(() => [...teams].sort((a, b) => a.name.localeCompare(b.name, 'es')), [teams])
   const disabled = locked || !user.hasPaid
 
@@ -216,7 +232,7 @@ function SpecialBets({ user, teams, extras, now, onSaved }: SpecialBetsProps) {
       await backend.saveExtras({
         userId: user.id,
         topScorer: topScorer.trim(),
-        championTeamId: championTeamId || null,
+        champion: champion.trim(),
         updatedAt: Date.now(),
       })
       await onSaved()
@@ -243,11 +259,7 @@ function SpecialBets({ user, teams, extras, now, onSaved }: SpecialBetsProps) {
       </p>
 
       <div className="mt-4 space-y-4">
-        <Field
-          label="Máximo goleador"
-          htmlFor="top-scorer"
-          hint={disabled ? undefined : 'Escribe el nombre del jugador.'}
-        >
+        <Field label="Máximo goleador" htmlFor="top-scorer" hint={disabled ? undefined : 'Escribe el nombre del jugador.'}>
           <input
             id="top-scorer"
             className="field disabled:opacity-60"
@@ -258,28 +270,32 @@ function SpecialBets({ user, teams, extras, now, onSaved }: SpecialBetsProps) {
           />
         </Field>
 
-        <Field label="Campeón de la Champions" htmlFor="champion">
-          <select
+        <Field
+          label="Campeón de la Champions"
+          htmlFor="champion"
+          hint={disabled ? undefined : 'Escribe el equipo o elige de la lista.'}
+        >
+          <input
             id="champion"
             className="field disabled:opacity-60"
-            value={championTeamId}
-            onChange={(event) => setChampionTeamId(event.target.value)}
+            list="equipos-porra"
+            value={champion}
+            onChange={(event) => setChampion(event.target.value)}
+            placeholder="Sin apostar"
             disabled={disabled}
-          >
-            <option value="">Sin apostar</option>
+          />
+          <datalist id="equipos-porra">
             {sortedTeams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
+              <option key={team.id} value={team.name} />
             ))}
-          </select>
+          </datalist>
         </Field>
 
         {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
         {!disabled ? (
           <button type="button" onClick={save} disabled={!dirty || saving} className="btn-primary w-full">
-            {saving ? <Spinner label="Guardando" /> : 'Guardar apuestas especiales'}
+            {saving ? 'Guardando…' : 'Guardar apuestas especiales'}
           </button>
         ) : null}
       </div>
@@ -294,12 +310,32 @@ function DailyFact({ now }: { now: number }) {
 
   return (
     <section className="mt-6">
-      <h2 className="px-1 pb-2.5 text-xs font-semibold tracking-wide text-ink-mute uppercase">Dato del día</h2>
-      <figure className="card relative overflow-hidden px-5 py-5">
-        <Quote size={56} aria-hidden="true" className="pointer-events-none absolute -top-2 -right-2 text-line-soft" />
-        <blockquote className="relative text-[13px] leading-relaxed text-ink-soft italic">
-          <p>&ldquo;{fact}&rdquo;</p>
+      <figure className="card-live-gold relative overflow-hidden p-5">
+        {/* Resplandor dorado en la esquina, para que no sea una tarjeta más. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 -right-12 size-44 rounded-full opacity-50"
+          style={{
+            background:
+              'radial-gradient(circle, color-mix(in oklab, var(--color-gold) 26%, transparent) 0%, transparent 70%)',
+          }}
+        />
+
+        <figcaption className="relative flex items-center gap-2">
+          <span aria-hidden="true" className="h-px w-6 bg-gold/50" />
+          <span className="font-mono text-[10px] tracking-[0.2em] text-gold uppercase">Dato del día</span>
+        </figcaption>
+
+        <blockquote className="relative mt-3">
+          <span
+            aria-hidden="true"
+            className="absolute -top-4 -left-1 font-display text-6xl leading-none text-gold/20"
+          >
+            &ldquo;
+          </span>
+          <p className="relative pl-6 font-display text-[13.5px] leading-relaxed text-ink-soft italic">{fact}</p>
         </blockquote>
+
       </figure>
     </section>
   )

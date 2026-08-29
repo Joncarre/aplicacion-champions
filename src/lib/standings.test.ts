@@ -43,7 +43,7 @@ const user = (id: string): PublicUser => ({
 
 const CONFIG: TournamentConfig = {
   actualTopScorer: null,
-  actualChampionTeamId: null,
+  actualChampion: null,
   currentMatchdayOverride: null,
   entryFee: 10,
 }
@@ -142,13 +142,13 @@ describe('computeUserScore', () => {
   })
 
   it('suma los puntos de goleador y campeón', () => {
-    const extras: Extras = { userId: 'u', topScorer: 'Haaland', championTeamId: 'a', updatedAt: 0 }
+    const extras: Extras = { userId: 'u', topScorer: 'Haaland', champion: 'Alfa', updatedAt: 0 }
     const score = computeUserScore({
       userId: 'u',
       predictions: [prediction('u', 'm1', 1, 2, 1)],
       matches,
       extras,
-      config: { ...CONFIG, actualTopScorer: 'Erling Haaland', actualChampionTeamId: 'a' },
+      config: { ...CONFIG, actualTopScorer: 'Erling Haaland', actualChampion: 'Alfa' },
     })
     expect(score.extraPoints).toBe(75)
     expect(score.totalPoints).toBe(78)

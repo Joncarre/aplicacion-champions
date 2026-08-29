@@ -98,10 +98,10 @@ export function scoreExtras(
   const topScorerHit = Boolean(
     extras?.topScorer && config.actualTopScorer && namesMatch(extras.topScorer, config.actualTopScorer),
   )
+  // El campeón también se escribe a mano, así que se compara igual que el
+  // goleador: sin tildes, sin mayúsculas y aceptando el nombre corto.
   const championHit = Boolean(
-    extras?.championTeamId &&
-      config.actualChampionTeamId &&
-      extras.championTeamId === config.actualChampionTeamId,
+    extras?.champion && config.actualChampion && namesMatch(extras.champion, config.actualChampion),
   )
   return {
     points: (topScorerHit ? POINTS.topScorer : 0) + (championHit ? POINTS.champion : 0),

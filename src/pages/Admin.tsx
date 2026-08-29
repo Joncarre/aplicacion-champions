@@ -15,7 +15,7 @@ import type { Match, PublicUser, TournamentConfig } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
 import { DEFAULT_TEAMS } from '@/data/teams'
-import { generateFixtures } from '@/data/fixtures'
+import { buildOfficialMatches } from '@/data/fixtures'
 import { MATCHDAY_WINDOWS } from '@/data/calendar'
 import { madridToUtc, toDateTimeInputValue } from '@/lib/date'
 import { getBackend, useDemoBackend } from '@/services/backend'
@@ -401,7 +401,7 @@ function CalendarPanel() {
     }
     const backend = await getBackend()
     await backend.replaceTeams(DEFAULT_TEAMS)
-    await backend.replaceMatches(generateFixtures(DEFAULT_TEAMS))
+    await backend.replaceMatches(buildOfficialMatches())
     await recomputeScores()
   }
 
@@ -424,8 +424,8 @@ function CalendarPanel() {
         <div>
           <h2 className="text-sm font-semibold text-ink">Sembrar la competición</h2>
           <p className="mt-1 text-xs leading-relaxed text-ink-mute">
-            Carga los 36 equipos por defecto y genera las 8 jornadas. Los horarios son de relleno hasta que la UEFA
-            publique los definitivos; puedes corregirlos partido a partido aquí abajo.
+            Carga los 36 equipos del sorteo y los 144 partidos oficiales con sus horarios. Si la UEFA mueve alguno,
+            puedes corregirlo aquí abajo sin tocar el resto.
           </p>
         </div>
         <button
@@ -435,7 +435,7 @@ function CalendarPanel() {
           className="btn-primary w-full text-xs"
         >
           <Wand size={15} aria-hidden="true" />
-          Equipos y calendario por defecto
+          Equipos y calendario oficiales
         </button>
       </div>
 
@@ -557,20 +557,24 @@ function TournamentPanel() {
           />
         </Field>
 
-        <Field label="Campeón real" htmlFor="actual-champion">
-          <select
+        <Field
+          label="Campeón real"
+          htmlFor="actual-champion"
+          hint="Escríbelo o elige de la lista. Se compara igual de flexible que el goleador."
+        >
+          <input
             id="actual-champion"
             className="field"
-            value={draft.actualChampionTeamId ?? ''}
-            onChange={(event) => setDraft((c) => ({ ...c, actualChampionTeamId: event.target.value || null }))}
-          >
-            <option value="">Todavía sin decidir</option>
+            list="equipos-champions"
+            value={draft.actualChampion ?? ''}
+            placeholder="Todavía sin decidir"
+            onChange={(event) => setDraft((c) => ({ ...c, actualChampion: event.target.value || null }))}
+          />
+          <datalist id="equipos-champions">
             {sortedTeams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
+              <option key={team.id} value={team.name} />
             ))}
-          </select>
+          </datalist>
         </Field>
       </div>
 

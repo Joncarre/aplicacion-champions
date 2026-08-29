@@ -27,6 +27,7 @@ const TONES = {
   info: { icon: Info, box: 'border-brand/30 bg-brand/10 text-brand-soft' },
   success: { icon: CircleCheck, box: 'border-exact/30 bg-exact/10 text-exact' },
   warning: { icon: TriangleAlert, box: 'border-sign/30 bg-sign/10 text-sign' },
+  pending: { icon: Info, box: 'border-pending/30 bg-pending/10 text-pending' },
   error: { icon: CircleAlert, box: 'border-miss/30 bg-miss/10 text-miss' },
 } as const
 
