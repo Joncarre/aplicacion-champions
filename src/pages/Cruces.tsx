@@ -1,7 +1,8 @@
 import { Workflow } from 'lucide-react'
-import { KNOCKOUT_ROUNDS, KNOCKOUT_START } from '@/data/calendar'
+import { KNOCKOUT_START } from '@/data/calendar'
 import { formatCountdown } from '@/lib/date'
 import { useNow } from '@/hooks/useNow'
+import { Reveal } from '@/components/Reveal'
 import { PageHeader } from '@/components/ui'
 
 export default function Cruces() {
@@ -12,7 +13,7 @@ export default function Cruces() {
     <>
       <PageHeader title="Cruces" subtitle="La fase eliminatoria" />
 
-      <div className="card flex flex-col items-center gap-4 px-6 py-10 text-center">
+      <Reveal className="card flex flex-col items-center gap-4 px-6 py-10 text-center">
         <span className="grid size-14 place-items-center rounded-2xl bg-brand/12 text-brand-soft">
           <Workflow size={26} aria-hidden="true" />
         </span>
@@ -28,19 +29,7 @@ export default function Cruces() {
         {remaining > 0 ? (
           <p className="font-mono text-xs tracking-wide text-gold uppercase">Faltan {formatCountdown(remaining)}</p>
         ) : null}
-      </div>
-
-      <section className="mt-5">
-        <h2 className="px-1 pb-2.5 text-xs font-semibold tracking-wide text-ink-mute uppercase">Calendario previsto</h2>
-        <ol className="card divide-y divide-line-soft">
-          {KNOCKOUT_ROUNDS.map((round) => (
-            <li key={round.id} className="flex items-baseline justify-between gap-4 px-4 py-3.5">
-              <span className="text-[15px] font-semibold text-ink">{round.name}</span>
-              <span className="shrink-0 text-right text-xs text-ink-mute">{round.label}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      </Reveal>
     </>
   )
 }

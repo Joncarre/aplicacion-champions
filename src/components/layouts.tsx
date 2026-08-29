@@ -28,12 +28,13 @@ export function ProtectedLayout() {
 /** Zona pública: si ya hay sesión, no tiene sentido volver a bienvenida o login. */
 export function PublicLayout() {
   const { user, initializing } = useAuth()
+  const location = useLocation()
 
   if (initializing) return <FullPageLoader label="Cargando" />
   if (user) return <Navigate to="/clasificacion" replace />
 
   return (
-    <div className="min-h-dvh bg-base">
+    <div key={location.pathname} className="animate-page min-h-dvh bg-base">
       <Outlet />
     </div>
   )

@@ -10,6 +10,7 @@ import { formatLongDay, madridDayKey } from '@/lib/date'
 import { lockReasonFor } from '@/lib/locks'
 import { MatchCard, type DraftScore } from '@/components/MatchCard'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
+import { Reveal, stagger } from '@/components/Reveal'
 import { Alert, EmptyState, PageHeader } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
@@ -176,24 +177,28 @@ export default function Jornadas() {
             }
           />
         ) : (
-          byDay.map(([day, dayMatches]) => (
+          byDay.map(([day, dayMatches], dayIndex) => (
             <section key={day} className="space-y-2.5">
-              <h2 className="pt-1 text-xs font-semibold tracking-wide text-ink-mute uppercase">
+              <Reveal
+                as="h2"
+                className="pt-1 text-xs font-semibold tracking-wide text-ink-mute uppercase"
+              >
                 {formatLongDay(dayMatches[0]?.kickoff ?? 0)}
-              </h2>
-              {dayMatches.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  homeTeam={teamById.get(match.homeTeamId)}
-                  awayTeam={teamById.get(match.awayTeamId)}
-                  prediction={myPredictions.get(match.id)}
-                  draft={drafts[match.id]}
-                  onDraftChange={(matchId, draft) => setDrafts((current) => ({ ...current, [matchId]: draft }))}
-                  hasPaid={hasPaid}
-                  currentMatchday={currentMatchday}
-                  now={now}
-                />
+              </Reveal>
+              {dayMatches.map((match, index) => (
+                <Reveal key={match.id} delay={stagger(dayIndex === 0 ? index : index + 2, 40, 260)}>
+                  <MatchCard
+                    match={match}
+                    homeTeam={teamById.get(match.homeTeamId)}
+                    awayTeam={teamById.get(match.awayTeamId)}
+                    prediction={myPredictions.get(match.id)}
+                    draft={drafts[match.id]}
+                    onDraftChange={(matchId, draft) => setDrafts((current) => ({ ...current, [matchId]: draft }))}
+                    hasPaid={hasPaid}
+                    currentMatchday={currentMatchday}
+                    now={now}
+                  />
+                </Reveal>
               ))}
             </section>
           ))

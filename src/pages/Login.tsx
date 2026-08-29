@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Alert, Field } from '@/components/ui'
+import { Reveal } from '@/components/Reveal'
 import { Spinner } from '@/components/Spinner'
 
 export default function Login() {
@@ -43,7 +44,8 @@ export default function Login() {
         <h1 className="font-display text-4xl leading-tight font-extrabold tracking-tight text-ink">Iniciar sesión</h1>
         <p className="mt-2 text-sm text-ink-soft">Con el nickname que elegiste al registrarte.</p>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
+        <Reveal className="mt-8">
+          <form onSubmit={onSubmit} className="space-y-5" noValidate>
           <Field label="Nickname" htmlFor="nickname">
             <input
               id="nickname"
@@ -84,7 +86,8 @@ export default function Login() {
           <button type="submit" className="btn-primary w-full" disabled={saving}>
             {saving ? <Spinner label="Entrando" /> : 'Entrar'}
           </button>
-        </form>
+          </form>
+        </Reveal>
 
         <p className="mt-6 text-center text-sm text-ink-mute">
           ¿Todavía no tienes cuenta?{' '}

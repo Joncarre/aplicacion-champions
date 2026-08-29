@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { GithubIcon } from '@/components/icons'
+import { Reveal } from '@/components/Reveal'
 
 export default function Welcome() {
   return (
@@ -15,28 +16,34 @@ export default function Welcome() {
       />
 
       <main className="safe-top flex flex-1 flex-col justify-center py-12">
-        <p className="font-mono text-xs tracking-[0.22em] text-gold uppercase">Temporada 2026/27</p>
+        <Reveal as="p" className="font-mono text-xs tracking-[0.22em] text-gold uppercase">
+          Temporada 2026/27
+        </Reveal>
 
-        <h1 className="mt-3 font-display text-5xl leading-[0.95] font-extrabold tracking-tight text-balance text-ink">
+        <Reveal
+          as="h1"
+          delay={80}
+          className="mt-3 font-display text-5xl leading-[0.95] font-extrabold tracking-tight text-balance text-ink"
+        >
           La porra de la <span className="text-brand-soft">Champions</span>
-        </h1>
+        </Reveal>
 
-        <p className="mt-4 text-base leading-relaxed text-ink-soft">
+        <Reveal as="p" delay={160} className="mt-4 text-base leading-relaxed text-ink-soft">
           Ocho jornadas de fase liga, treinta y seis equipos y una clasificación que no perdona. Aquí apostamos los
           resultados, se cuentan los aciertos y se ve quién manda de verdad.
-        </p>
+        </Reveal>
 
-        <div className="mt-10 space-y-3">
+        <Reveal delay={240} className="mt-10 space-y-3">
           <Link to="/registro" className="btn-primary w-full">
             Crear cuenta
           </Link>
           <Link to="/login" className="btn-ghost w-full">
             Iniciar sesión
           </Link>
-        </div>
+        </Reveal>
       </main>
 
-      <footer className="safe-bottom border-t border-line-soft py-6">
+      <footer className="safe-bottom border-t border-line-soft pt-6 pb-12">
         <p className="flex items-center justify-center gap-2 text-xs text-ink-mute">
           Desarrollado por{' '}
           <a

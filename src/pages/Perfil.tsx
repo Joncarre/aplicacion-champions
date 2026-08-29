@@ -15,13 +15,17 @@ import { buildEvolution } from '@/lib/standings'
 import { getBackend } from '@/services/backend'
 import { Avatar } from '@/components/Avatar'
 import { AvatarEditor } from '@/components/AvatarEditor'
-import { CumulativeChart, GapChart, HitsDonut, StatTile } from '@/components/charts'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ProfileStats } from '@/components/ProfileStats'
+import { Reveal } from '@/components/Reveal'
+import { CumulativeChart, GapChart, HitsDonut } from '@/components/charts'
 import { Alert, Field, PageHeader } from '@/components/ui'
 
 export default function Perfil() {
   const { user, logout, refreshUser } = useAuth()
   const { internalStandings, teams, myExtras, refresh } = useData()
   const now = useNow(60_000)
+  const [confirmingLogout, setConfirmingLogout] = useState(false)
 
   const me = useMemo(
     () => internalStandings.find((row) => row.user.id === user?.id),
@@ -55,45 +59,55 @@ export default function Perfil() {
 
       <IdentityCard user={user} onPhotoSaved={refreshUser} />
 
-      <section className="mt-4 grid grid-cols-2 gap-2.5">
-        <StatTile
-          label="Posición"
-          value={me ? `${me.position}º` : '–'}
-          hint={`de ${internalStandings.length}`}
-          tone="gold"
+      <Reveal className="mt-4">
+        <ProfileStats
+          position={me?.position ?? null}
+          participants={internalStandings.length}
+          totalPoints={me?.totalPoints ?? 0}
+          exactHits={me?.exactHits ?? 0}
+          signHits={me?.signHits ?? 0}
+          extraPoints={me?.extraPoints ?? 0}
         />
-        <StatTile
-          label="Puntos"
-          value={me?.totalPoints ?? 0}
-          hint={me && me.extraPoints > 0 ? `${me.extraPoints} de especiales` : undefined}
-          tone="brand"
-        />
-        <StatTile
-          label="Marcadores exactos"
-          value={me?.exactHits ?? 0}
-          hint={`${POINTS.exact} puntos cada uno`}
-          tone="exact"
-        />
-        <StatTile label="Signos acertados" value={me?.signHits ?? 0} hint={`${POINTS.sign} punto cada uno`} />
-      </section>
+      </Reveal>
 
-      <SpecialBets user={user} teams={teams} extras={myExtras} now={now} onSaved={refresh} />
+      <Reveal>
+        <SpecialBets user={user} teams={teams} extras={myExtras} now={now} onSaved={refresh} />
+      </Reveal>
 
       <section className="mt-4 space-y-3">
         <h2 className="px-1 text-xs font-semibold tracking-wide text-ink-mute uppercase">Tu evolución</h2>
-        <CumulativeChart points={evolution} />
-        <GapChart points={evolution} />
-        <HitsDonut signHits={me?.signHits ?? 0} exactHits={me?.exactHits ?? 0} missed={missed} />
+        <Reveal>
+          <CumulativeChart points={evolution} />
+        </Reveal>
+        <Reveal>
+          <GapChart points={evolution} />
+        </Reveal>
+        <Reveal>
+          <HitsDonut signHits={me?.signHits ?? 0} exactHits={me?.exactHits ?? 0} missed={missed} />
+        </Reveal>
       </section>
 
-      <DailyFact now={now} />
+      <Reveal>
+        <DailyFact now={now} />
+      </Reveal>
 
       <div className="mt-6">
-        <button type="button" onClick={logout} className="btn-ghost w-full text-miss">
+        <button type="button" onClick={() => setConfirmingLogout(true)} className="btn-ghost w-full text-miss">
           <LogOut size={17} aria-hidden="true" />
           Cerrar sesión
         </button>
       </div>
+
+      {confirmingLogout ? (
+        <ConfirmDialog
+          title="¿Cerrar sesión?"
+          description="Tendrás que volver a entrar con tu nickname y tu contraseña. Tus apuestas guardadas no se pierden."
+          confirmLabel="Cerrar sesión"
+          destructive
+          onConfirm={logout}
+          onCancel={() => setConfirmingLogout(false)}
+        />
+      ) : null}
     </>
   )
 }

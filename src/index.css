@@ -22,6 +22,8 @@
   --color-brand: #4d7cff;
   --color-brand-soft: #8fabff;
   --color-brand-deep: #1f3a8a;
+  /* Celeste claro para las referencias de las gráficas. */
+  --color-sky: #a9d9f2;
   --color-gold: #e6c86e;
   --color-gold-deep: #6b5518;
 
@@ -33,7 +35,7 @@
   --color-miss: #f2545b;
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Manrope', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 
   --radius-card: 1rem;
@@ -87,7 +89,7 @@
   @keyframes page-enter {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(10px) scale(0.995);
     }
     to {
       opacity: 1;
@@ -127,7 +129,7 @@
 
 /* Respeta la zona segura de los móviles con notch o barra gestual. */
 @utility animate-page {
-  animation: page-enter 280ms cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  animation: page-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @utility safe-bottom {
@@ -210,12 +212,12 @@
       padding-box,
     conic-gradient(
         from var(--border-angle),
-        color-mix(in oklab, var(--color-gold) 14%, transparent) 0deg,
-        color-mix(in oklab, var(--color-gold) 14%, transparent) 180deg,
-        color-mix(in oklab, var(--color-gold) 50%, transparent) 260deg,
+        transparent 0deg,
+        transparent 205deg,
+        color-mix(in oklab, var(--color-gold) 45%, transparent) 265deg,
         var(--color-gold) 305deg,
-        color-mix(in oklab, var(--color-gold) 50%, transparent) 345deg,
-        color-mix(in oklab, var(--color-gold) 14%, transparent) 360deg
+        color-mix(in oklab, var(--color-gold) 45%, transparent) 345deg,
+        transparent 360deg
       )
       border-box;
   animation: spin-border 14s linear infinite;

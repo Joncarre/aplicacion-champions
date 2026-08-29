@@ -123,10 +123,13 @@ describe('la aplicación', () => {
 
     expect(await screen.findByRole('heading', { name: 'Clasificación' })).toBeTruthy()
 
-    // Todos los participantes de prueba, y quien mira aparece marcado como «tú».
+    // Todos los participantes de prueba.
     const nicknames = new RegExp('^(' + DEMO_NICKNAMES.join('|') + ')$')
     expect(await screen.findAllByText(nicknames)).toHaveLength(DEMO_NICKNAMES.length)
-    expect(screen.getByText('tú')).toBeTruthy()
+
+    // La fila de quien mira se distingue por el borde animado, sin etiqueta.
+    expect(screen.getByText('lucia').closest('li')).toHaveClass('card-live')
+    expect(screen.getByText('marta').closest('li')).not.toHaveClass('card-live')
   })
 
   it('cambia a la clasificación real de la Champions', async () => {
@@ -203,6 +206,28 @@ describe('la aplicación', () => {
     expect(screen.getByRole('img', { name: /puntos acumulados por jornada/i })).toBeTruthy()
     expect(screen.getByRole('img', { name: /diferencia de puntos con el primer clasificado/i })).toBeTruthy()
     expect(screen.getByRole('img', { name: /de \d+ pronósticos/i })).toBeTruthy()
+  })
+
+  it('pide confirmación antes de cerrar la sesión', async () => {
+    const user = await loginAs('lucia')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+    await user.click(await screen.findByRole('button', { name: /cerrar sesión/i }))
+
+    const dialog = await screen.findByRole('dialog', { name: /cerrar sesión/i })
+
+    // Al cancelar, la sesión sigue abierta.
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('heading', { name: 'Perfil' })).toBeTruthy()
+
+    // Al confirmar, la zona privada deja de ser accesible y vuelve al acceso.
+    await user.click(screen.getByRole('button', { name: /cerrar sesión/i }))
+    const again = await screen.findByRole('dialog', { name: /cerrar sesión/i })
+    await user.click(within(again).getByRole('button', { name: 'Cerrar sesión' }))
+
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Perfil' })).toBeNull()
   })
 
   it('deja el panel de administración solo al administrador', async () => {

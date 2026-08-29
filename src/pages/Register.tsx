@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { MIN_PASSWORD_LENGTH, normalizeNickname, validateRegistration, type RegisterInput } from '@/services/auth'
 import { Alert, Field } from '@/components/ui'
+import { Reveal } from '@/components/Reveal'
 import { Spinner } from '@/components/Spinner'
 
 const EMPTY: RegisterInput = { nombre: '', apellidos: '', nickname: '', password: '' }
@@ -71,7 +72,8 @@ export default function Register() {
           Cuando te registres tendré que marcarte como pagado antes de que puedas apostar. Avísame y lo hago.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
+        <Reveal className="mt-8">
+          <form onSubmit={onSubmit} className="space-y-5" noValidate>
           <Field label="Nombre" htmlFor="nombre" error={errors.nombre}>
             <input
               id="nombre"
@@ -148,7 +150,8 @@ export default function Register() {
           <button type="submit" className="btn-primary w-full" disabled={disabled}>
             {status === 'saving' ? <Spinner label="Creando la cuenta" /> : 'Crear cuenta'}
           </button>
-        </form>
+          </form>
+        </Reveal>
 
         <p className="mt-6 text-center text-sm text-ink-mute">
           ¿Ya tienes cuenta?{' '}

@@ -4,6 +4,7 @@ import type { InternalRow, TeamStanding } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
 import { Avatar } from '@/components/Avatar'
+import { Reveal, stagger } from '@/components/Reveal'
 import { EmptyState, PageHeader, Segmented } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
@@ -45,7 +46,7 @@ export default function Clasificacion() {
 /* ────────────────────────────── Clasificación de la porra ────────────────────────────── */
 
 /** Oro, plata y bronce para el podio, en tonos que se lean sobre el fondo oscuro. */
-const PODIUM = ['text-gold', 'text-ink', 'text-[#e0b087]'] as const
+const PODIUM = ['text-gold', 'text-ink', 'text-[#f0cba6]'] as const
 
 /**
  * Zona de la tabla en la que cae cada participante. Con menos de seis
@@ -78,13 +79,15 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
 
   return (
     <ul className="space-y-2">
-      {rows.map((row) => {
+      {rows.map((row, index) => {
         const isMe = row.user.id === user?.id
         const zone = zoneOf(row.position, rows.length)
 
         return (
-          <li
+          <Reveal
+            as="li"
             key={row.user.id}
+            delay={stagger(index, 35, 280)}
             // Las filas van sin borde; el único marco es el animado de quien mira.
             className={[
               'relative overflow-hidden',
@@ -113,10 +116,7 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
               <Avatar user={row.user} />
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-semibold text-ink">
-                  {row.user.nickname}
-                  {isMe ? <span className="ml-1.5 text-xs font-medium text-brand-soft">tú</span> : null}
-                </p>
+                <p className="truncate text-[15px] font-semibold text-ink">{row.user.nickname}</p>
                 <p className="truncate text-xs text-ink-mute">
                   {row.user.nombre} {row.user.apellidos}
                 </p>
@@ -137,7 +137,7 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
                 </div>
               </div>
             </div>
-          </li>
+          </Reveal>
         )
       })}
     </ul>
@@ -168,7 +168,7 @@ function ChampionsTable({ rows }: { rows: TeamStanding[] }) {
   }
 
   return (
-    <div className="card overflow-x-auto">
+    <Reveal className="card overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <caption className="sr-only">Clasificación de la fase liga de la Champions League</caption>
         <thead>
@@ -215,6 +215,6 @@ function ChampionsTable({ rows }: { rows: TeamStanding[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </Reveal>
   )
 }

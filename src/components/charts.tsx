@@ -86,7 +86,7 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 
         <YAxis ticks={ticks} yAt={yAt} />
 
-        <path d={toPath(best)} fill="none" stroke="var(--color-line)" strokeWidth="1.5" strokeDasharray="3 4" />
+        <path d={toPath(best)} fill="none" stroke="var(--color-sky)" strokeWidth="1" strokeDasharray="3 4" />
         <path d={area} fill={`url(#${gradientId})`} />
         <path
           d={toPath(mine)}
@@ -114,7 +114,7 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-mute">
         <LegendDot color="var(--color-brand)" label="Tus puntos" />
-        <LegendDot color="var(--color-line)" label="Máximo posible" dashed />
+        <LegendDot color="var(--color-sky)" label="Máximo posible" dashed />
       </figcaption>
     </figure>
   )
@@ -123,21 +123,32 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 /* ────────────────────────────── Distancia con el líder ────────────────────────────── */
 
 /**
- * Cuántos puntos te sacaba el primero al cerrar cada jornada. El eje va hacia
- * abajo, así que las barras cuelgan del cero: cuanto más largas, más lejos.
+ * Cuántos puntos te sacaba el primero al cerrar cada jornada.
+ *
+ * Se dibuja como un área que cuelga de la línea dorada del líder: el cero está
+ * arriba y el hueco entre ambas es la distancia. Al ser la misma gramática que
+ * la gráfica de puntos acumulados, las dos se leen igual.
  */
 export function GapChart({ points }: { points: EvolutionPoint[] }) {
+  const gradientId = useId()
   const played = points.filter((point) => point.played)
   if (played.length === 0) return <ChartPlaceholder />
 
   const worst = Math.max(1, ...played.map((point) => Math.abs(point.gapToLeader)))
   const ticks = axisTicks(worst, 3)
   const depth = ticks[ticks.length - 1] ?? 1
-  // El cero está arriba y los valores crecen hacia abajo.
+  // El cero está arriba y la distancia crece hacia abajo.
   const yAt = (value: number) => PAD_TOP + (Math.abs(value) / depth) * plotHeight
 
-  const barWidth = Math.min(26, (plotWidth / played.length) * 0.55)
+  const line: [number, number][] = played.map((point, index) => [
+    xAt(index, played.length),
+    yAt(point.gapToLeader),
+  ])
   const last = played[played.length - 1]
+  const lastX = xAt(played.length - 1, played.length).toFixed(1)
+
+  // El área se cierra contra la línea del líder, no contra el suelo.
+  const area = `${toPath(line)} L${lastX},${PAD_TOP} L${PAD_LEFT},${PAD_TOP} Z`
 
   return (
     <figure className="card p-4">
@@ -154,27 +165,38 @@ export function GapChart({ points }: { points: EvolutionPoint[] }) {
           .map((point) => `jornada ${point.matchday}, ${point.gapToLeader}`)
           .join('; ')}`}
       >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-gold)" stopOpacity="0.26" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.04" />
+          </linearGradient>
+        </defs>
+
         <YAxis ticks={ticks} yAt={yAt} format={(value) => (value === 0 ? '0' : `−${value}`)} />
 
-        {played.map((point, index) => {
-          const height = yAt(point.gapToLeader) - PAD_TOP
-          const leader = point.gapToLeader === 0
+        <path d={area} fill={`url(#${gradientId})`} />
+        <path
+          d={toPath(line)}
+          fill="none"
+          stroke="var(--color-brand)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
 
-          return (
-            <rect
-              key={point.matchday}
-              x={xAt(index, played.length) - barWidth / 2}
-              y={PAD_TOP}
-              width={barWidth}
-              height={Math.max(3, height)}
-              rx="3"
-              fill={leader ? 'var(--color-gold)' : 'var(--color-brand)'}
-              opacity={leader ? 1 : 0.6}
-            />
-          )
-        })}
+        {line.map(([x, y], index) => (
+          <circle
+            key={index}
+            cx={x}
+            cy={y}
+            r={index === line.length - 1 ? 4 : 2.5}
+            fill="var(--color-base)"
+            stroke="var(--color-brand)"
+            strokeWidth="2"
+          />
+        ))}
 
-        {/* La línea del líder se pinta encima de las barras para que no se pierda. */}
+        {/* La línea del líder va encima de todo para que nunca se pierda. */}
         <line
           x1={PAD_LEFT}
           y1={PAD_TOP}
@@ -182,14 +204,14 @@ export function GapChart({ points }: { points: EvolutionPoint[] }) {
           y2={PAD_TOP}
           stroke="var(--color-gold)"
           strokeWidth="1.5"
-          strokeDasharray="3 4"
         />
 
         <XAxis points={played} />
       </svg>
 
-      <figcaption className="mt-2 text-[11px] text-ink-mute">
-        La línea dorada es el líder de la porra en ese momento.
+      <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-mute">
+        <LegendDot color="var(--color-gold)" label="Líder" />
+        <LegendDot color="var(--color-brand)" label="Tú" />
       </figcaption>
     </figure>
   )
@@ -272,33 +294,6 @@ export function HitsDonut({ signHits, exactHits, missed }: HitsProps) {
 }
 
 /* ────────────────────────────── Piezas compartidas ────────────────────────────── */
-
-export function StatTile({
-  label,
-  value,
-  hint,
-  tone = 'ink',
-}: {
-  label: string
-  value: string | number
-  hint?: string
-  tone?: 'ink' | 'brand' | 'gold' | 'exact'
-}) {
-  const colors = {
-    ink: 'text-ink',
-    brand: 'text-brand-soft',
-    gold: 'text-gold',
-    exact: 'text-exact',
-  } as const
-
-  return (
-    <div className="card px-3.5 py-3">
-      <p className="text-[11px] font-medium text-ink-mute">{label}</p>
-      <p className={`mt-1 font-mono text-2xl leading-none font-bold tabular-nums ${colors[tone]}`}>{value}</p>
-      {hint ? <p className="mt-1 text-[11px] text-ink-mute">{hint}</p> : null}
-    </div>
-  )
-}
 
 function ChartHeading({ title, detail }: { title: string; detail: string }) {
   return (

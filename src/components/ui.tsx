@@ -127,7 +127,8 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
             onClick={() => onChange(option.value)}
             className={[
               'min-h-10 rounded-lg px-3 text-sm font-semibold transition-colors duration-200',
-              selected ? 'bg-raised text-ink shadow-lift' : 'text-ink-mute hover:text-ink-soft',
+              // Mismo azul pastel que la pestaña activa de la navegación inferior.
+              selected ? 'bg-brand/15 text-brand-soft' : 'text-ink-mute hover:text-ink-soft',
             ].join(' ')}
           >
             {option.label}
