@@ -1,6 +1,7 @@
 import type { Extras, Match, Prediction, Team, TournamentConfig, User, UserScore } from '@/types'
 import { DEFAULT_TEAMS } from '@/data/teams'
 import { buildOfficialMatches } from '@/data/fixtures'
+import { TOTAL_MATCHDAYS } from '@/data/calendar'
 import { hashPassword, randomSalt } from '@/lib/crypto'
 import { now } from '@/lib/clock'
 import { madridToUtc } from '@/lib/date'
@@ -19,7 +20,7 @@ import { BackendError, DEFAULT_CONFIG, type Backend } from './backend'
 
 // Al subir esta versión, los navegadores que tuvieran datos viejos se
 // resiembran solos.
-const PREFIX = 'porra-champions:demo:v5'
+const PREFIX = 'porra-champions:demo:v6'
 const key = (collection: string) => `${PREFIX}:${collection}`
 
 const DEMO_PASSWORD = 'champions'
@@ -32,11 +33,32 @@ interface DemoProfile {
   hasPaid: boolean
   /** Cuánto acierta, de 0 a 1. Solo sirve para que los datos de prueba varíen. */
   skill: number
+  /**
+   * Acierto al final de la fase liga. Si se indica, el nivel se interpola
+   * jornada a jornada entre `skill` y este valor, lo que permite dibujar
+   * arranques fuertes que se desinflan o remontadas.
+   */
+  skillEnd?: number
+}
+
+/**
+ * Nivel de acierto en una jornada concreta, según la forma del participante.
+ *
+ * La interpolación no es lineal sino con raíz cuadrada, así que el cambio se
+ * concentra al principio: quien arranca fuerte se desinfla enseguida en vez de
+ * ir cayendo poco a poco. Es lo que hace que un buen comienzo no garantice
+ * acabar arriba, que es justo lo que tiene gracia de una porra.
+ */
+function skillAt(profile: DemoProfile, matchday: number): number {
+  if (profile.skillEnd === undefined) return profile.skill
+  const linear = Math.min(1, Math.max(0, (matchday - 1) / (TOTAL_MATCHDAYS - 1)))
+  const progress = Math.sqrt(linear)
+  return profile.skill + (profile.skillEnd - profile.skill) * progress
 }
 
 const DEMO_PROFILES: DemoProfile[] = [
   { nickname: 'joncarre', nombre: 'Jonathan', apellidos: 'Carrero', isAdmin: true, hasPaid: true, skill: 0.55 },
-  { nickname: 'lucia', nombre: 'Lucía', apellidos: 'Serrano Gil', isAdmin: false, hasPaid: true, skill: 0.44 },
+  { nickname: 'lucia', nombre: 'Lucía', apellidos: 'Serrano Gil', isAdmin: false, hasPaid: true, skill: 0.98, skillEnd: 0.02 },
   { nickname: 'dani', nombre: 'Daniel', apellidos: 'Ortega Ruiz', isAdmin: false, hasPaid: true, skill: 0.5 },
   { nickname: 'marta', nombre: 'Marta', apellidos: 'Iglesias Nieto', isAdmin: false, hasPaid: true, skill: 0.62 },
   { nickname: 'pablo', nombre: 'Pablo', apellidos: 'Ferrer Navas', isAdmin: false, hasPaid: true, skill: 0.4 },
@@ -217,7 +239,7 @@ async function seed(): Promise<void> {
       if (!isPast && match.kickoff > today + 21 * 24 * 3_600_000) continue
 
       const [homeGoals, awayGoals] = isPast
-        ? guessFrom(match.homeGoals ?? 0, match.awayGoals ?? 0, profile.skill, random)
+        ? guessFrom(match.homeGoals ?? 0, match.awayGoals ?? 0, skillAt(profile, match.matchday), random)
         : [randomGoals(random), randomGoals(random)]
 
       predictions.push({

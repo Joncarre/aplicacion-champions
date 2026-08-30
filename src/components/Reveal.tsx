@@ -56,7 +56,7 @@ export function Reveal({ children, delay = 0, as: Tag = 'div', className = '' }:
         ...(shown ? null : { translate: '0 1rem' }),
       }}
       className={[
-        'transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+        'transition-[opacity,translate] duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
         shown ? 'opacity-100' : 'opacity-0',
         className,
       ]
@@ -69,6 +69,6 @@ export function Reveal({ children, delay = 0, as: Tag = 'div', className = '' }:
 }
 
 /** Escalona un índice sin que los últimos elementos de una lista larga tarden una eternidad. */
-export function stagger(index: number, step = 45, max = 320): number {
+export function stagger(index: number, step = 70, max = 500): number {
   return Math.min(index * step, max)
 }

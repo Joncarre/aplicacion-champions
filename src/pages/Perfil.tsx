@@ -19,7 +19,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ProfileStats } from '@/components/ProfileStats'
 import { Reveal } from '@/components/Reveal'
 import { CumulativeChart, GapChart, HitsDonut } from '@/components/charts'
-import { Alert, Field, PageHeader } from '@/components/ui'
+import { Alert, PageHeader } from '@/components/ui'
 
 export default function Perfil() {
   const { user, logout, refreshUser } = useAuth()
@@ -75,7 +75,6 @@ export default function Perfil() {
       </Reveal>
 
       <section className="mt-4 space-y-3">
-        <h2 className="px-1 text-xs font-semibold tracking-wide text-ink-mute uppercase">Tu evolución</h2>
         <Reveal>
           <CumulativeChart points={evolution} />
         </Reveal>
@@ -91,9 +90,9 @@ export default function Perfil() {
         <DailyFact now={now} />
       </Reveal>
 
-      <div className="mt-6">
-        <button type="button" onClick={() => setConfirmingLogout(true)} className="btn-ghost w-full text-miss">
-          <LogOut size={17} aria-hidden="true" />
+      <div className="mt-8 flex justify-center">
+        <button type="button" onClick={() => setConfirmingLogout(true)} className="btn-ghost btn-sm text-miss">
+          <LogOut size={15} aria-hidden="true" />
           Cerrar sesión
         </button>
       </div>
@@ -152,7 +151,7 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
   }
 
   return (
-    <section className="card p-5">
+    <section className="px-1 py-2">
       <div className="flex items-center gap-4">
         <div className="relative">
           <Avatar user={user} size="lg" />
@@ -177,7 +176,8 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {/* Alineado a la línea base del nickname, no a su centro vertical. */}
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <p className="truncate font-display text-2xl leading-tight font-extrabold text-ink">{user.nickname}</p>
             <PaymentBadge paid={user.hasPaid} />
           </div>
@@ -201,16 +201,18 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
   )
 }
 
-/** Estado del pago, reducido a lo mínimo: un punto y una palabra. */
+/**
+ * Estado del pago sin caja ni marco: solo la palabra en versalitas. Es un
+ * indicador, no un botón, así que no necesita parecer una pastilla.
+ */
 function PaymentBadge({ paid }: { paid: boolean }) {
   return (
     <span
       className={[
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold',
-        paid ? 'border-exact/30 bg-exact/10 text-exact' : 'border-sign/30 bg-sign/10 text-sign',
+        'shrink-0 font-mono text-[10px] font-semibold tracking-[0.14em] uppercase',
+        paid ? 'text-exact' : 'text-sign',
       ].join(' ')}
     >
-      <span aria-hidden="true" className={`size-1.5 rounded-full ${paid ? 'bg-exact' : 'bg-sign'}`} />
       {paid ? 'Pagado' : 'Pendiente'}
     </span>
   )
@@ -259,61 +261,109 @@ function SpecialBets({ user, teams, extras, now, onSaved }: SpecialBetsProps) {
   }
 
   return (
-    <section className="card mt-4 p-5">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-lg font-bold text-ink">Apuestas especiales</h2>
-        <span className="shrink-0 font-mono text-xs text-gold">
-          +{POINTS.topScorer} / +{POINTS.champion}
-        </span>
-      </div>
-      <p className="mt-1 text-xs leading-relaxed text-ink-mute">
-        {locked
-          ? `Se cerraron el ${formatFullDate(EXTRAS_DEADLINE)}.`
-          : `Puedes cambiarlas hasta el ${formatFullDate(EXTRAS_DEADLINE)}.`}
-      </p>
+    <section className="mt-8 px-1">
+      <h2 className="text-center font-mono text-[11px] font-semibold tracking-[0.18em] text-gold uppercase">
+        Apuestas especiales
+      </h2>
+      <span aria-hidden="true" className="rule-taper mt-2.5 block" />
 
-      <div className="mt-4 space-y-4">
-        <Field label="Máximo goleador" htmlFor="top-scorer" hint={disabled ? undefined : 'Escribe el nombre del jugador.'}>
-          <input
-            id="top-scorer"
-            className="field disabled:opacity-60"
-            value={topScorer}
-            onChange={(event) => setTopScorer(event.target.value)}
-            placeholder="Sin apostar"
-            disabled={disabled}
-          />
-        </Field>
+      <div className="mt-5 space-y-5">
+        <SpecialSlot
+          id="top-scorer"
+          label="Máximo goleador"
+          points={POINTS.topScorer}
+          value={topScorer}
+          onChange={setTopScorer}
+          disabled={disabled}
+        />
 
-        <Field
-          label="Campeón de la Champions"
-          htmlFor="champion"
-          hint={disabled ? undefined : 'Escribe el equipo o elige de la lista.'}
-        >
-          <input
-            id="champion"
-            className="field disabled:opacity-60"
-            list="equipos-porra"
-            value={champion}
-            onChange={(event) => setChampion(event.target.value)}
-            placeholder="Sin apostar"
-            disabled={disabled}
-          />
-          <datalist id="equipos-porra">
-            {sortedTeams.map((team) => (
-              <option key={team.id} value={team.name} />
-            ))}
-          </datalist>
-        </Field>
+        <SpecialSlot
+          id="champion"
+          label="Campeón"
+          points={POINTS.champion}
+          value={champion}
+          onChange={setChampion}
+          disabled={disabled}
+          list="equipos-porra"
+        />
+        <datalist id="equipos-porra">
+          {sortedTeams.map((team) => (
+            <option key={team.id} value={team.name} />
+          ))}
+        </datalist>
 
         {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
-        {!disabled ? (
-          <button type="button" onClick={save} disabled={!dirty || saving} className="btn-primary w-full">
-            {saving ? 'Guardando…' : 'Guardar apuestas especiales'}
-          </button>
-        ) : null}
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-[10px] leading-relaxed text-ink-mute">
+            {locked ? 'Cerradas el' : 'Abiertas hasta el'} {formatFullDate(EXTRAS_DEADLINE)}
+          </p>
+          {!disabled ? (
+            <button
+              type="button"
+              onClick={save}
+              disabled={!dirty || saving}
+              className="btn-primary btn-sm shrink-0"
+            >
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          ) : null}
+        </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * Una apuesta especial: el nombre de la categoría, lo que vale y el hueco para
+ * escribir. Comparte el trazo bajo el texto con el marcador de las jornadas,
+ * para que apostar se sienta igual en toda la aplicación.
+ */
+function SpecialSlot({
+  id,
+  label,
+  points,
+  value,
+  onChange,
+  disabled,
+  list,
+}: {
+  id: string
+  label: string
+  points: number
+  value: string
+  onChange: (value: string) => void
+  disabled: boolean
+  list?: string
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <label htmlFor={id} className="font-mono text-[10px] tracking-[0.14em] text-ink-mute uppercase">
+          {label}
+        </label>
+        <span className="shrink-0 font-mono text-[10px] text-gold">+{points}</span>
+      </div>
+
+      <input
+        id={id}
+        list={list}
+        className="mt-1.5 w-full bg-transparent pb-1.5 font-display text-lg text-ink
+                   placeholder:font-sans placeholder:text-sm placeholder:text-ink-mute
+                   focus:text-brand-soft focus:outline-none disabled:text-ink-soft"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Sin apostar"
+        disabled={disabled}
+      />
+      <span
+        aria-hidden="true"
+        className={[
+          'block h-[2px] rounded-full transition-colors duration-200',
+          disabled ? 'bg-line' : value === '' ? 'bg-gold/30' : 'bg-gold/70',
+        ].join(' ')}
+      />
+    </div>
   )
 }
 

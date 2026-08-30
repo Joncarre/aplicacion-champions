@@ -16,7 +16,7 @@ export default function Clasificacion() {
 
   return (
     <>
-      <PageHeader title="Clasificación" subtitle="Cómo va la porra y cómo va la Champions" />
+      <PageHeader title="Clasificación" />
 
       <Segmented
         ariaLabel="Elegir clasificación"
@@ -45,8 +45,16 @@ export default function Clasificacion() {
 
 /* ────────────────────────────── Clasificación de la porra ────────────────────────────── */
 
-/** Oro, plata y bronce para el podio, en tonos que se lean sobre el fondo oscuro. */
-const PODIUM = ['text-gold', 'text-ink', 'text-[#f0cba6]'] as const
+/**
+ * Oro, plata y bronce para el podio. Va como estilo en línea y no como clase
+ * de utilidad: así el color no depende de que se haya generado la clase ni
+ * puede quedar tapado por ninguna otra regla.
+ */
+const PODIUM = ['var(--color-gold)', 'var(--color-ink)', '#f7d9bd'] as const
+
+function positionColor(position: number): string {
+  return PODIUM[position - 1] ?? 'var(--color-ink-mute)'
+}
 
 /**
  * Zona de la tabla en la que cae cada participante. Con menos de seis
@@ -105,10 +113,8 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
 
             <div className="relative flex items-center gap-3 px-3 py-3">
               <span
-                className={[
-                  'w-6 shrink-0 text-center font-mono text-base font-bold tabular-nums',
-                  PODIUM[row.position - 1] ?? 'text-ink-mute',
-                ].join(' ')}
+                style={{ color: positionColor(row.position) }}
+                className="w-6 shrink-0 text-center font-mono text-base font-bold tabular-nums"
               >
                 {row.position}
               </span>
@@ -156,6 +162,10 @@ const COLUMNS = [
   { key: 'goalDiff', label: 'DG', title: 'Diferencia de goles' },
 ] as const
 
+/** Anchos compartidos entre la cabecera y las filas, para que las columnas cuadren. */
+const NUMBER_COLUMN = 'w-[1.4rem] shrink-0 text-center'
+const POINTS_COLUMN = 'w-[1.9rem] shrink-0 text-center'
+
 function ChampionsTable({ rows }: { rows: TeamStanding[] }) {
   if (rows.length === 0) {
     return (
@@ -168,53 +178,68 @@ function ChampionsTable({ rows }: { rows: TeamStanding[] }) {
   }
 
   return (
-    <Reveal className="card overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
-        <caption className="sr-only">Clasificación de la fase liga de la Champions League</caption>
-        <thead>
-          <tr className="border-b border-line text-[11px] tracking-wide text-ink-mute uppercase">
-            <th scope="col" className="sticky left-0 z-10 bg-surface px-3 py-2.5 text-left font-semibold">
-              Equipo
-            </th>
-            {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" title={column.title} className="px-2 py-2.5 text-center font-semibold">
-                {column.label}
-              </th>
-            ))}
-            <th scope="col" className="px-3 py-2.5 text-right font-semibold">
-              Pts
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.team.id} className="border-b border-line-soft last:border-0">
-              <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-2.5 text-left font-normal">
-                <span className="flex items-center gap-2.5">
-                  <span className="w-5 shrink-0 text-right font-mono text-xs tabular-nums text-ink-mute">
-                    {row.position}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[13px] font-semibold text-ink">{row.team.name}</span>
-                    <span className="block truncate text-[11px] text-ink-mute">{row.team.league}</span>
-                  </span>
-                </span>
-              </th>
-              {COLUMNS.map((column) => (
-                <td
-                  key={column.key}
-                  className="px-2 py-2.5 text-center font-mono text-[13px] tabular-nums text-ink-soft"
+    <div className="space-y-2">
+      {/* La leyenda va una sola vez, arriba, y no se repite en cada equipo. */}
+      <div className="flex items-center gap-1.5 px-2.5 font-mono text-[10px] text-ink-mute">
+        <span className="me-2 w-5 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1">Equipo</span>
+        {COLUMNS.map((column) => (
+          <span key={column.key} className={NUMBER_COLUMN} title={column.title}>
+            {column.label}
+          </span>
+        ))}
+        <span className={POINTS_COLUMN}>Pts</span>
+      </div>
+
+      <ul className="space-y-2">
+        {rows.map((row, index) => {
+          const zone = zoneOf(row.position, rows.length)
+
+          return (
+            <Reveal
+              as="li"
+              key={row.team.id}
+              delay={stagger(index, 35, 280)}
+              className="relative overflow-hidden rounded-2xl bg-surface"
+            >
+              {zone ? (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 right-0 w-2/5"
+                  style={{ background: ZONE_TINT[zone] }}
+                />
+              ) : null}
+
+              <div className="relative flex items-center gap-1.5 px-2.5 py-2.5">
+                <span
+                  style={{ color: positionColor(row.position) }}
+                  className="me-2 w-5 shrink-0 text-center font-mono text-sm font-bold tabular-nums"
                 >
-                  {column.key === 'goalDiff' && row.goalDiff > 0 ? `+${row.goalDiff}` : row[column.key]}
-                </td>
-              ))}
-              <td className="px-3 py-2.5 text-right font-mono text-[15px] font-bold tabular-nums text-ink">
-                {row.points}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Reveal>
+                  {row.position}
+                </span>
+
+                <div className="min-w-0 flex-1 pr-1">
+                  <p className="truncate text-[13px] font-semibold text-ink">{row.team.name}</p>
+                  <p className="truncate text-[11px] text-ink-mute">{row.team.league}</p>
+                </div>
+
+                {COLUMNS.map((column) => (
+                  <span
+                    key={column.key}
+                    className={`${NUMBER_COLUMN} font-mono text-[13px] tabular-nums text-ink-soft`}
+                  >
+                    {column.key === 'goalDiff' && row.goalDiff > 0 ? `+${row.goalDiff}` : row[column.key]}
+                  </span>
+                ))}
+
+                <span className={`${POINTS_COLUMN} font-mono text-base font-bold tabular-nums text-ink`}>
+                  {row.points}
+                </span>
+              </div>
+            </Reveal>
+          )
+        })}
+      </ul>
+    </div>
   )
 }

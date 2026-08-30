@@ -22,9 +22,9 @@ interface MatchCardProps {
 }
 
 const OUTCOME_STYLES = {
-  exact: { label: 'Marcador exacto', chip: 'bg-exact/15 text-exact' },
-  sign: { label: 'Signo acertado', chip: 'bg-sign/15 text-sign' },
-  miss: { label: 'Fallado', chip: 'bg-line text-ink-mute' },
+  exact: { label: 'Marcador exacto', text: 'text-exact' },
+  sign: { label: 'Signo acertado', text: 'text-sign' },
+  miss: { label: 'Fallado', text: 'text-ink-mute' },
 } as const
 
 export function MatchCard({
@@ -49,7 +49,6 @@ export function MatchCard({
 
   const scored = finished && prediction ? outcomeOf(prediction, match) : null
   const points = scored ? pointsForOutcome(scored) : null
-  const empty = value.home === '' || value.away === ''
 
   const update = (side: 'home' | 'away') => (raw: string) => {
     // Un solo dígito por marcador: nadie va a apostar un 12-0.
@@ -58,60 +57,42 @@ export function MatchCard({
   }
 
   return (
-    <article className="card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-line-soft px-4 py-2.5">
-        <span className="font-mono text-xs font-medium text-ink-soft">{formatTime(match.kickoff)}</span>
+    // Sin tarjeta ni borde: los partidos se separan con la línea afilada que
+    // pinta la pantalla de Jornadas.
+    <article className="py-3.5">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs font-medium text-aqua">{formatTime(match.kickoff)}</span>
         <MatchStatus match={match} lock={lock} now={now} finished={finished} />
       </div>
 
-      <div className="space-y-2 px-4 py-3.5">
+      <div className="mt-3 space-y-2">
         <TeamRow team={homeTeam} fallback={match.homeTeamId} goals={match.homeGoals} winner={isWinner(match, 'home')} />
         <TeamRow team={awayTeam} fallback={match.awayTeamId} goals={match.awayGoals} winner={isWinner(match, 'away')} />
       </div>
 
-      {/* Zona de apuesta: se separa del resultado real con su propio fondo. */}
-      <div
-        className={[
-          'flex items-center justify-between gap-3 border-t px-4 py-3 transition-colors',
-          editable && empty ? 'border-brand/25 bg-brand/8' : 'border-line-soft bg-raised/50',
-        ].join(' ')}
-      >
-        <span
-          className={[
-            'text-xs font-semibold',
-            editable && empty ? 'text-brand-soft' : 'text-ink-mute',
-          ].join(' ')}
-        >
-          Tu apuesta
-        </span>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="font-mono text-[11px] tracking-wide text-brand-soft uppercase">Tu apuesta</span>
 
         <div className="flex items-center gap-2.5">
-          {scored ? (
+          {/* Un fallo no suma nada, así que tampoco hace falta anunciarlo. */}
+          {scored && points ? (
             <span
               title={OUTCOME_STYLES[scored].label}
-              className={`rounded-md px-2 py-1 font-mono text-[11px] font-bold ${OUTCOME_STYLES[scored].chip}`}
+              className={`font-mono text-[11px] font-semibold ${OUTCOME_STYLES[scored].text}`}
             >
-              {points === 0 ? '0 pts' : `+${points} pts`}
+              +{points} pts
             </span>
           ) : null}
 
-          <div className="flex items-center gap-2">
-            <ScoreInput
-              value={value.home}
-              onChange={update('home')}
-              editable={editable}
-              label={`Goles de ${homeTeam?.name ?? 'local'}`}
-            />
-            <span aria-hidden="true" className="font-mono text-ink-mute">
-              –
-            </span>
-            <ScoreInput
-              value={value.away}
-              onChange={update('away')}
-              editable={editable}
-              label={`Goles de ${awayTeam?.name ?? 'visitante'}`}
-            />
-          </div>
+          <ScorePicker
+            home={value.home}
+            away={value.away}
+            editable={editable}
+            onHomeChange={update('home')}
+            onAwayChange={update('away')}
+            homeLabel={`Goles de ${homeTeam?.name ?? 'local'}`}
+            awayLabel={`Goles de ${awayTeam?.name ?? 'visitante'}`}
+          />
         </div>
       </div>
     </article>
@@ -184,46 +165,97 @@ function TeamRow({
   )
 }
 
-function ScoreInput({
-  value,
-  onChange,
+interface ScorePickerProps {
+  home: string
+  away: string
+  editable: boolean
+  onHomeChange: (value: string) => void
+  onAwayChange: (value: string) => void
+  homeLabel: string
+  awayLabel: string
+}
+
+/**
+ * Marcador de la apuesta, sin cajas.
+ *
+ * Cada número se apoya sobre un trazo fino que se enciende al escribir, como
+ * el hueco de un formulario de papel. Encaja con una pantalla sin tarjetas ni
+ * bordes: lo único que se ve es la cifra y la línea que la sostiene.
+ */
+function ScorePicker({
+  home,
+  away,
   editable,
+  onHomeChange,
+  onAwayChange,
+  homeLabel,
+  awayLabel,
+}: ScorePickerProps) {
+  return (
+    <div className="flex items-end gap-2">
+      <ScoreSlot value={home} label={homeLabel} editable={editable} onChange={onHomeChange} />
+      <span aria-hidden="true" className="pb-2 font-mono text-sm text-ink-mute">
+        –
+      </span>
+      <ScoreSlot value={away} label={awayLabel} editable={editable} onChange={onAwayChange} />
+    </div>
+  )
+}
+
+function ScoreSlot({
+  value,
   label,
+  editable,
+  onChange,
 }: {
   value: string
-  onChange: (value: string) => void
-  editable: boolean
   label: string
+  editable: boolean
+  onChange: (value: string) => void
 }) {
+  // El trazo vive fuera del campo para poder engordarlo sin mover la cifra.
+  const rule = (
+    <span
+      aria-hidden="true"
+      className={[
+        'block h-[2px] rounded-full transition-colors duration-200',
+        editable ? (value === '' ? 'bg-brand/35' : 'bg-brand/70') : 'bg-line',
+      ].join(' ')}
+    />
+  )
+
   if (!editable) {
     return (
-      <span
-        aria-label={`${label}: ${value || 'sin apostar'}`}
-        className="grid size-12 place-items-center rounded-xl border border-line-soft bg-surface font-mono text-lg tabular-nums text-ink-soft"
-      >
-        {value === '' ? '–' : value}
+      <span className="w-8">
+        <span
+          aria-label={`${label}: ${value || 'sin apostar'}`}
+          className="block pb-1 text-center font-mono text-lg font-normal tabular-nums text-ink-soft"
+        >
+          {value === '' ? '–' : value}
+        </span>
+        {rule}
       </span>
     )
   }
 
   return (
-    <input
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      maxLength={1}
-      aria-label={label}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      onFocus={(event) => event.target.select()}
-      placeholder="–"
-      className={[
-        'size-12 rounded-xl border-2 bg-base text-center font-mono text-lg font-bold tabular-nums text-ink',
-        'transition-colors placeholder:font-normal placeholder:text-ink-mute',
-        'focus:border-brand focus:outline-none',
-        value === '' ? 'border-brand/40' : 'border-line',
-      ].join(' ')}
-    />
+    // El campo conserva 44 px de alto para el dedo aunque la cifra sea pequeña.
+    <span className="w-8">
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={1}
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={(event) => event.target.select()}
+        placeholder="–"
+        className="h-11 w-full bg-transparent pb-1 text-center font-mono text-lg font-normal tabular-nums text-ink
+                   placeholder:text-ink-mute focus:text-brand-soft focus:outline-none"
+      />
+      {rule}
+    </span>
   )
 }
 

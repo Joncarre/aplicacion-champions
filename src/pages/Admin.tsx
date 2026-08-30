@@ -50,7 +50,7 @@ export default function Admin() {
         </Link>
       </div>
 
-      <PageHeader title="Administración" subtitle="Pagos, resultados y ajustes de la porra" />
+      <PageHeader title="Administración" />
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SECTIONS.map((item) => (

@@ -147,7 +147,7 @@ export default function Register() {
 
           {message ? <Alert tone={status === 'done' ? 'success' : 'error'}>{message}</Alert> : null}
 
-          <button type="submit" className="btn-primary w-full" disabled={disabled}>
+          <button type="submit" className="btn-primary btn-sm mx-auto block px-14" disabled={disabled}>
             {status === 'saving' ? <Spinner label="Creando la cuenta" /> : 'Crear cuenta'}
           </button>
           </form>

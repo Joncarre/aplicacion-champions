@@ -49,10 +49,7 @@ function axisTicks(max: number, intervals: number): number[] {
 
 /* ────────────────────────────── Puntos acumulados ────────────────────────────── */
 
-/**
- * Puntos que llevas jornada a jornada frente al máximo que se podía sacar.
- * El hueco entre las dos líneas es, literalmente, lo que has dejado escapar.
- */
+/** Puntos que llevas acumulados jornada a jornada. */
 export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
   const gradientId = useId()
   const played = points.filter((point) => point.played)
@@ -63,14 +60,13 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
   const yAt = (value: number) => PAD_TOP + (1 - value / ceiling) * plotHeight
 
   const mine: [number, number][] = played.map((point, index) => [xAt(index, played.length), yAt(point.cumulative)])
-  const best: [number, number][] = played.map((point, index) => [xAt(index, played.length), yAt(point.maxCumulative)])
   const last = played[played.length - 1]
 
   const floor = (PAD_TOP + plotHeight).toFixed(1)
   const area = `${toPath(mine)} L${xAt(played.length - 1, played.length).toFixed(1)},${floor} L${PAD_LEFT},${floor} Z`
 
   return (
-    <figure className="card p-4">
+    <figure className="px-1 py-3">
       <ChartHeading
         title="Puntos acumulados"
         detail={`${last?.cumulative ?? 0} de ${last?.maxCumulative ?? 0} posibles`}
@@ -86,13 +82,12 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 
         <YAxis ticks={ticks} yAt={yAt} />
 
-        <path d={toPath(best)} fill="none" stroke="var(--color-sky)" strokeWidth="1" strokeDasharray="3 4" />
         <path d={area} fill={`url(#${gradientId})`} />
         <path
           d={toPath(mine)}
           fill="none"
           stroke="var(--color-brand)"
-          strokeWidth="2.5"
+          strokeWidth="1.25"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -111,11 +106,6 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 
         <XAxis points={played} />
       </svg>
-
-      <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-mute">
-        <LegendDot color="var(--color-brand)" label="Tus puntos" />
-        <LegendDot color="var(--color-sky)" label="Máximo posible" dashed />
-      </figcaption>
     </figure>
   )
 }
@@ -125,33 +115,32 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 /**
  * Cuántos puntos te sacaba el primero al cerrar cada jornada.
  *
- * Se dibuja como un área que cuelga de la línea dorada del líder: el cero está
- * arriba y el hueco entre ambas es la distancia. Al ser la misma gramática que
- * la gráfica de puntos acumulados, las dos se leen igual.
+ * En vez de dibujar la resta, se dibujan las dos trayectorias: la del líder en
+ * dorado y la tuya en azul, con la banda entre ambas sombreada. La distancia
+ * deja de ser un número abstracto y pasa a ser el hueco que se ve: se abre
+ * cuando te descuelgas y se cierra cuando recortas.
  */
 export function GapChart({ points }: { points: EvolutionPoint[] }) {
   const gradientId = useId()
   const played = points.filter((point) => point.played)
   if (played.length === 0) return <ChartPlaceholder />
 
-  const worst = Math.max(1, ...played.map((point) => Math.abs(point.gapToLeader)))
-  const ticks = axisTicks(worst, 3)
-  const depth = ticks[ticks.length - 1] ?? 1
-  // El cero está arriba y la distancia crece hacia abajo.
-  const yAt = (value: number) => PAD_TOP + (Math.abs(value) / depth) * plotHeight
+  const ticks = axisTicks(Math.max(1, ...played.map((point) => point.leaderCumulative)), 4)
+  const ceiling = ticks[ticks.length - 1] ?? 1
+  const yAt = (value: number) => PAD_TOP + (1 - value / ceiling) * plotHeight
 
-  const line: [number, number][] = played.map((point, index) => [
+  const mine: [number, number][] = played.map((point, index) => [xAt(index, played.length), yAt(point.cumulative)])
+  const leader: [number, number][] = played.map((point, index) => [
     xAt(index, played.length),
-    yAt(point.gapToLeader),
+    yAt(point.leaderCumulative),
   ])
-  const last = played[played.length - 1]
-  const lastX = xAt(played.length - 1, played.length).toFixed(1)
 
-  // El área se cierra contra la línea del líder, no contra el suelo.
-  const area = `${toPath(line)} L${lastX},${PAD_TOP} L${PAD_LEFT},${PAD_TOP} Z`
+  // La banda se cierra volviendo por la línea del líder al revés.
+  const band = `${toPath(leader)} L${[...mine].reverse().map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L')} Z`
+  const last = played[played.length - 1]
 
   return (
-    <figure className="card p-4">
+    <figure className="px-1 py-3">
       <ChartHeading
         title="Distancia con el líder"
         detail={last?.gapToLeader === 0 ? 'Vas primero' : `${last?.gapToLeader ?? 0} puntos`}
@@ -161,58 +150,52 @@ export function GapChart({ points }: { points: EvolutionPoint[] }) {
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="mt-3 h-auto w-full"
         role="img"
-        aria-label={`Diferencia de puntos con el primer clasificado en cada jornada: ${played
-          .map((point) => `jornada ${point.matchday}, ${point.gapToLeader}`)
+        aria-label={`Tus puntos frente a los del líder en cada jornada: ${played
+          .map((point) => `jornada ${point.matchday}, ${point.cumulative} contra ${point.leaderCumulative}`)
           .join('; ')}`}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-gold)" stopOpacity="0.26" />
-            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.04" />
+            <stop offset="0%" stopColor="var(--color-gold)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.06" />
           </linearGradient>
         </defs>
 
-        <YAxis ticks={ticks} yAt={yAt} format={(value) => (value === 0 ? '0' : `−${value}`)} />
+        <YAxis ticks={ticks} yAt={yAt} />
 
-        <path d={area} fill={`url(#${gradientId})`} />
+        <path d={band} fill={`url(#${gradientId})`} />
+
         <path
-          d={toPath(line)}
+          d={toPath(leader)}
+          fill="none"
+          stroke="var(--color-gold)"
+          strokeWidth="1.25"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d={toPath(mine)}
           fill="none"
           stroke="var(--color-brand)"
-          strokeWidth="2.5"
+          strokeWidth="1.25"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {line.map(([x, y], index) => (
+        {mine.map(([x, y], index) => (
           <circle
             key={index}
             cx={x}
             cy={y}
-            r={index === line.length - 1 ? 4 : 2.5}
-            fill="var(--color-base)"
+            r={index === mine.length - 1 ? 4 : 2.5}
+            fill={index === mine.length - 1 ? 'var(--color-brand)' : 'var(--color-base)'}
             stroke="var(--color-brand)"
-            strokeWidth="2"
+            strokeWidth="1.5"
           />
         ))}
 
-        {/* La línea del líder va encima de todo para que nunca se pierda. */}
-        <line
-          x1={PAD_LEFT}
-          y1={PAD_TOP}
-          x2={WIDTH - PAD_RIGHT}
-          y2={PAD_TOP}
-          stroke="var(--color-gold)"
-          strokeWidth="1.5"
-        />
-
         <XAxis points={played} />
       </svg>
-
-      <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-mute">
-        <LegendDot color="var(--color-gold)" label="Líder" />
-        <LegendDot color="var(--color-brand)" label="Tú" />
-      </figcaption>
     </figure>
   )
 }
@@ -242,7 +225,7 @@ export function HitsDonut({ signHits, exactHits, missed }: HitsProps) {
   const hits = signHits + exactHits
 
   return (
-    <figure className="card p-4">
+    <figure className="px-1 py-3">
       <ChartHeading title="Tus aciertos" detail={`${Math.round((hits / total) * 100)} % de acierto`} />
 
       <div className="mt-3 flex items-center gap-5">
@@ -361,26 +344,9 @@ function XAxis({ points }: { points: EvolutionPoint[] }) {
   )
 }
 
-function LegendDot({ color, label, dashed = false }: { color: string; label: string; dashed?: boolean }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span
-        aria-hidden="true"
-        className="h-0.5 w-4 rounded-full"
-        style={
-          dashed
-            ? { backgroundImage: `repeating-linear-gradient(90deg, ${color} 0 3px, transparent 3px 6px)` }
-            : { backgroundColor: color }
-        }
-      />
-      {label}
-    </span>
-  )
-}
-
 function ChartPlaceholder() {
   return (
-    <div className="card grid min-h-36 place-items-center px-4 py-8 text-center">
+    <div className="grid min-h-36 place-items-center px-4 py-8 text-center">
       <p className="max-w-56 text-sm text-balance text-ink-mute">
         Aquí aparecerá tu evolución en cuanto se juegue la primera jornada.
       </p>

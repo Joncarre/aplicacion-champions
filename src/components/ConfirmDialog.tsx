@@ -13,8 +13,12 @@ interface ConfirmDialogProps {
 }
 
 /**
- * Diálogo de confirmación. Se cierra con Escape y el foco entra directamente
- * en el botón de cancelar, que es la salida segura.
+ * Diálogo de confirmación.
+ *
+ * Sube desde el borde inferior, que es donde está el pulgar, y se apoya en un
+ * fondo desenfocado en vez de en un marco. Se cierra con Escape, tocando fuera
+ * o con el botón de cancelar, que es donde entra el foco: la salida segura
+ * siempre es la más fácil de alcanzar.
  */
 export function ConfirmDialog({
   title,
@@ -38,22 +42,36 @@ export function ConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-base/85 p-4 backdrop-blur-sm sm:items-center"
+      onClick={onCancel}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-base/80 p-4 backdrop-blur-md sm:items-center"
     >
-      <div className="safe-bottom animate-page w-full max-w-sm rounded-3xl border border-line bg-surface p-6 shadow-lift">
-        <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
-        {description ? <p className="mt-2 text-sm leading-relaxed text-ink-soft">{description}</p> : null}
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="safe-bottom animate-page w-full max-w-xs rounded-3xl bg-surface px-6 pt-7 pb-6 text-center shadow-lift"
+      >
+        <span
+          aria-hidden="true"
+          className="mx-auto block h-[2px] w-10 rounded-full"
+          style={{
+            background: `linear-gradient(to right, transparent, var(--color-${destructive ? 'miss' : 'brand'}), transparent)`,
+          }}
+        />
 
-        <div className="mt-6 flex gap-2">
-          <button type="button" autoFocus onClick={onCancel} className="btn-ghost flex-1">
-            {cancelLabel}
-          </button>
+        <h2 className="mt-5 font-display text-lg font-bold text-ink">{title}</h2>
+        {description ? (
+          <p className="mt-2 font-mono text-[11px] leading-relaxed text-ink-mute">{description}</p>
+        ) : null}
+
+        <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
             onClick={onConfirm}
-            className={['btn flex-1', destructive ? 'bg-miss text-white' : 'bg-brand text-white'].join(' ')}
+            className={['btn btn-sm w-full', destructive ? 'bg-miss/90 text-white' : 'bg-brand text-white'].join(' ')}
           >
             {confirmLabel}
+          </button>
+          <button type="button" autoFocus onClick={onCancel} className="btn-quiet btn-sm w-full">
+            {cancelLabel}
           </button>
         </div>
       </div>

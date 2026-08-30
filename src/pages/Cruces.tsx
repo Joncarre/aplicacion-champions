@@ -11,9 +11,9 @@ export default function Cruces() {
 
   return (
     <>
-      <PageHeader title="Cruces" subtitle="La fase eliminatoria" />
+      <PageHeader title="Cruces" />
 
-      <Reveal className="card flex flex-col items-center gap-4 px-6 py-10 text-center">
+      <Reveal className="flex flex-col items-center gap-4 px-6 py-10 text-center">
         <span className="grid size-14 place-items-center rounded-2xl bg-brand/12 text-brand-soft">
           <Workflow size={26} aria-hidden="true" />
         </span>

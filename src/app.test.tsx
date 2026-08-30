@@ -8,6 +8,7 @@ import { DEMO_NICKNAMES, DEMO_UNPAID, resetDemoData } from './services/demoBacke
 import { clearSession } from './services/session'
 import { factOfTheDay } from './data/facts'
 import { now } from './lib/clock'
+import { TEAM_COUNT } from './data/teams'
 
 /**
  * Prueba de humo de la interfaz. Monta la aplicación de verdad sobre el
@@ -130,6 +131,20 @@ describe('la aplicación', () => {
     // La fila de quien mira se distingue por el borde animado, sin etiqueta.
     expect(screen.getByText('lucia').closest('li')).toHaveClass('card-live')
     expect(screen.getByText('marta').closest('li')).not.toHaveClass('card-live')
+
+    // El podio va en oro, plata y bronce claro, que sobre el fondo oscuro es
+    // lo único que hace legible el tercer puesto.
+    const main = screen.getByRole('main')
+    const positions = within(main)
+      .getAllByRole('listitem')
+      .map(
+        (row, index) =>
+          [...row.querySelectorAll('span')].find((span) => span.textContent === String(index + 1))?.style.color ?? '',
+      )
+    expect(positions[0]).toBe('var(--color-gold)')
+    expect(positions[1]).toBe('var(--color-ink)')
+    expect(positions[2]).toBe('rgb(247, 217, 189)')
+    expect(positions[3]).toBe('var(--color-ink-mute)')
   })
 
   it('cambia a la clasificación real de la Champions', async () => {
@@ -137,11 +152,22 @@ describe('la aplicación', () => {
 
     await user.click(await screen.findByRole('tab', { name: 'Champions' }))
 
-    const table = await screen.findByRole('table')
-    expect(within(table).getByText('Real Madrid')).toBeTruthy()
-    // Las nueve columnas que pediste, más la de equipo.
-    expect(within(table).getAllByRole('columnheader')).toHaveLength(9)
-    expect(within(table).getAllByRole('row')).toHaveLength(37) // 36 equipos + cabecera
+    // Mismo formato de tarjetas que la porra, un equipo por fila. Se acota al
+    // contenido para no contar los elementos de la barra de navegación.
+    const main = screen.getByRole('main')
+    const rows = await within(main).findAllByRole('listitem')
+    expect(rows).toHaveLength(TEAM_COUNT)
+    expect(within(main).getByText('Real Madrid')).toBeTruthy()
+
+    // La leyenda aparece una sola vez, en la cabecera, no en cada equipo.
+    for (const label of ['PJ', 'G', 'E', 'P', 'GF', 'GC', 'DG', 'Pts']) {
+      expect(within(main).getAllByText(label), `falta ${label}`).toHaveLength(1)
+    }
+
+    // Y cada equipo trae sus ocho cifras a la derecha del nombre.
+    const first = rows[0]!
+    const figures = [...first.querySelectorAll('span')].filter((span) => /^[+-]?\d+$/.test(span.textContent ?? ''))
+    expect(figures).toHaveLength(9) // las 8 columnas más la posición
   })
 
   it('abre la jornada en curso y deja apostar a quien ha pagado', async () => {
@@ -163,7 +189,7 @@ describe('la aplicación', () => {
 
     await user.click(await screen.findByRole('link', { name: 'Jornadas' }))
 
-    expect(await screen.findByText(/no constas como pagado/i)).toBeTruthy()
+    expect(await screen.findByText(/pago pendiente/i)).toBeTruthy()
     // Sin pagar no hay ni un solo campo editable.
     expect(screen.queryAllByRole('textbox')).toHaveLength(0)
   })
@@ -175,8 +201,10 @@ describe('la aplicación', () => {
     await screen.findByRole('heading', { name: 'Jornadas' })
     await user.click(await screen.findByRole('tab', { name: /Jornada 3/ }))
 
-    expect(await screen.findByText(/jornada terminada/i)).toBeTruthy()
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Jornada 3/ })).toHaveAttribute('aria-selected', 'true'))
+    // Una jornada cerrada se ve, pero no se toca: ni un campo editable.
     await waitFor(() => expect(screen.queryAllByRole('textbox')).toHaveLength(0))
+    expect(screen.getAllByText(/^Finalizado$/).length).toBeGreaterThan(0)
   })
 
   it('anuncia que los cruces llegarán en febrero de 2027', async () => {
@@ -204,7 +232,7 @@ describe('la aplicación', () => {
 
     // Las tres gráficas de evolución.
     expect(screen.getByRole('img', { name: /puntos acumulados por jornada/i })).toBeTruthy()
-    expect(screen.getByRole('img', { name: /diferencia de puntos con el primer clasificado/i })).toBeTruthy()
+    expect(screen.getByRole('img', { name: /tus puntos frente a los del líder/i })).toBeTruthy()
     expect(screen.getByRole('img', { name: /de \d+ pronósticos/i })).toBeTruthy()
   })
 

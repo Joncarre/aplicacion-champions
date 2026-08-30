@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarOff, Check, Wallet } from 'lucide-react'
+import { CalendarOff, Check } from 'lucide-react'
 import type { Match, Prediction } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
@@ -111,7 +111,7 @@ export default function Jornadas() {
     } catch (cause) {
       setFeedback({
         tone: 'error',
-        text: cause instanceof Error ? cause.message : 'No se han podido guardar las apuestas',
+        text: cause instanceof Error ? cause.message : 'No se han podido guardar',
       })
     } finally {
       setSaving(false)
@@ -123,34 +123,20 @@ export default function Jornadas() {
 
   return (
     <>
-      <PageHeader
-        title="Jornadas"
-        subtitle={
-          isOpenMatchday
-            ? 'Apuesta antes de que empiece cada partido'
-            : matchday < currentMatchday
-              ? 'Jornada terminada'
-              : 'Se abrirá cuando acabe la jornada anterior'
-        }
-      />
+      <PageHeader title="Jornadas" />
 
       <MatchdayPicker value={matchday} onChange={setMatchday} currentMatchday={currentMatchday} />
 
       <div className="mt-5 space-y-4">
         {!hasPaid ? (
-          <Alert tone="warning">
-            <span className="inline-flex items-center gap-1.5">
-              <Wallet size={14} aria-hidden="true" />
-              Todavía no constas como pagado, así que puedes mirar pero no apostar. Avisa al administrador.
-            </span>
-          </Alert>
+          <Alert tone="warning">Pago pendiente: no puedes apostar</Alert>
         ) : null}
 
         {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
         {isOpenMatchday && hasPaid && missing > 0 ? (
           <Alert tone="pending">
-            Te faltan {missing} {missing === 1 ? 'partido' : 'partidos'} por apostar en esta jornada.
+            Te faltan {missing} {missing === 1 ? 'partido' : 'partidos'} por apostar
           </Alert>
         ) : null}
 
@@ -178,13 +164,15 @@ export default function Jornadas() {
           />
         ) : (
           byDay.map(([day, dayMatches], dayIndex) => (
-            <section key={day} className="space-y-2.5">
-              <Reveal
-                as="h2"
-                className="pt-1 text-xs font-semibold tracking-wide text-ink-mute uppercase"
-              >
-                {formatLongDay(dayMatches[0]?.kickoff ?? 0)}
+            <section key={day} className={dayIndex > 0 ? 'pt-4' : undefined}>
+              {/* La fecha encabeza el día y la línea afilada la subraya. */}
+              <Reveal as="h2">
+                <span className="block text-center font-mono text-[11px] font-semibold tracking-[0.18em] text-gold uppercase">
+                  {formatLongDay(dayMatches[0]?.kickoff ?? 0)}
+                </span>
+                <span aria-hidden="true" className="rule-taper mt-2.5 block" />
               </Reveal>
+
               {dayMatches.map((match, index) => (
                 <Reveal key={match.id} delay={stagger(dayIndex === 0 ? index : index + 2, 40, 260)}>
                   <MatchCard
@@ -214,34 +202,33 @@ export default function Jornadas() {
         hay que guardarlas y cuándo están a salvo.
       */}
       {showSaveBar ? (
-        <div className="safe-bottom fixed inset-x-0 bottom-[5.75rem] z-30 px-4">
-          <div className="mx-auto max-w-lg">
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving || pending.length === 0}
-              className={[
-                'btn w-full shadow-lift',
-                pending.length > 0
-                  ? 'bg-brand text-white'
-                  : 'border border-exact/30 bg-exact/12 text-exact',
-              ].join(' ')}
-            >
-              {saving ? (
-                <Spinner label="Guardando" />
-              ) : pending.length > 0 ? (
-                <>
-                  <Check size={17} aria-hidden="true" />
-                  Guardar {pending.length} {pending.length === 1 ? 'apuesta' : 'apuestas'}
-                </>
-              ) : (
-                <>
-                  <Check size={17} aria-hidden="true" />
-                  Todo guardado
-                </>
-              )}
-            </button>
-          </div>
+        <div className="safe-bottom pointer-events-none fixed inset-x-0 bottom-[7.25rem] z-30 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || pending.length === 0}
+            className={[
+              'pointer-events-auto inline-flex items-center gap-2 rounded-full transition-all duration-200',
+              pending.length > 0
+                ? 'min-h-11 bg-brand px-5 text-sm font-semibold text-white shadow-lift active:scale-[0.98]'
+                : // Sin nada pendiente deja de ser un botón y pasa a ser un acuse discreto.
+                  'min-h-8 bg-surface/80 px-3.5 font-mono text-[11px] tracking-wide text-ink-mute uppercase backdrop-blur',
+            ].join(' ')}
+          >
+            {saving ? (
+              <Spinner label="Guardando" />
+            ) : pending.length > 0 ? (
+              <>
+                <Check size={16} aria-hidden="true" />
+                Guardar {pending.length} {pending.length === 1 ? 'apuesta' : 'apuestas'}
+              </>
+            ) : (
+              <>
+                <Check size={12} className="text-exact" aria-hidden="true" />
+                Guardado
+              </>
+            )}
+          </button>
         </div>
       ) : null}
     </>

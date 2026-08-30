@@ -13,9 +13,8 @@ interface ProfileStatsProps {
 /**
  * Resumen del rendimiento del usuario en un solo bloque.
  *
- * Arriba la posición, que es lo primero que uno mira, con el anillo dorado del
- * podio si toca. Debajo, los tres números que la explican, separados por
- * divisorias: el total y de qué se compone.
+ * Arriba la posición, que es lo primero que uno mira, en dorado si está en el
+ * podio. Debajo, los tres números que la explican, separados por divisorias.
  */
 export function ProfileStats({
   position,
@@ -27,37 +26,36 @@ export function ProfileStats({
 }: ProfileStatsProps) {
   const podium = position !== null && position <= 3
   const columns = [
-    { value: totalPoints, label: 'Puntos totales', tone: 'text-ink' },
+    { value: totalPoints, label: 'Puntos totales', tone: 'text-brand-soft' },
     { value: exactHits, label: 'Marcadores exactos', tone: 'text-exact' },
     { value: signHits, label: 'Signos acertados', tone: 'text-sign' },
   ]
 
   return (
-    <section className="card overflow-hidden">
-      <div className="flex items-center gap-4 px-5 pt-5 pb-4">
+    <section>
+      <div className="flex items-baseline gap-2.5 px-1 pt-2 pb-4">
         <span
           className={[
-            'grid size-16 shrink-0 place-items-center rounded-full border-2 font-display text-2xl font-extrabold',
-            podium ? 'border-gold/45 bg-gold/10 text-gold' : 'border-line bg-raised text-ink',
+            'font-mono text-2xl leading-none font-bold tabular-nums',
+            podium ? 'text-gold' : 'text-ink',
           ].join(' ')}
         >
-          {position === null ? '–' : `${position}º`}
+          {position === null ? '–' : position}
+          <span className="text-base">º</span>
         </span>
 
         <div className="min-w-0">
           <p className="font-mono text-[10px] tracking-[0.2em] text-ink-mute uppercase">Posición</p>
-          <p className="mt-1 text-sm text-ink-soft">
+          <p className="mt-0.5 text-sm text-ink-soft">
             de {participants} {participants === 1 ? 'participante' : 'participantes'}
           </p>
           {extraPoints > 0 ? (
-            <p className="mt-0.5 text-xs text-gold">
-              +{extraPoints} de las apuestas especiales
-            </p>
+            <p className="mt-0.5 text-xs text-gold">+{extraPoints} de las apuestas especiales</p>
           ) : null}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 divide-x divide-line-soft border-t border-line-soft">
+      <div className="grid grid-cols-3 divide-x divide-line-soft">
         {columns.map((column) => (
           <div key={column.label} className="px-2 py-3.5 text-center">
             <p className={`font-mono text-2xl leading-none font-bold tabular-nums ${column.tone}`}>{column.value}</p>
@@ -66,7 +64,7 @@ export function ProfileStats({
         ))}
       </div>
 
-      <p className="border-t border-line-soft px-5 py-2.5 text-center font-mono text-[10px] text-ink-mute">
+      <p className="px-5 pt-4 text-center font-mono text-[10px] text-ink-mute">
         {POINTS.exact} pts por marcador exacto · {POINTS.sign} pt por signo
       </p>
     </section>

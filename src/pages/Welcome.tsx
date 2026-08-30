@@ -29,21 +29,20 @@ export default function Welcome() {
         </Reveal>
 
         <Reveal as="p" delay={160} className="mt-4 text-base leading-relaxed text-ink-soft">
-          Ocho jornadas de fase liga, treinta y seis equipos y una clasificación que no perdona. Aquí apostamos los
-          resultados, se cuentan los aciertos y se ve quién manda de verdad.
+          Ocho jornadas, treinta y seis equipos, un ganador.
         </Reveal>
 
-        <Reveal delay={240} className="mt-10 space-y-3">
-          <Link to="/registro" className="btn-primary w-full">
+        <Reveal delay={240} className="mt-10 flex gap-3">
+          <Link to="/registro" className="btn-primary btn-sm flex-1">
             Crear cuenta
           </Link>
-          <Link to="/login" className="btn-ghost w-full">
+          <Link to="/login" className="btn-ghost btn-sm flex-1">
             Iniciar sesión
           </Link>
         </Reveal>
       </main>
 
-      <footer className="safe-bottom border-t border-line-soft pt-6 pb-12">
+      <footer className="safe-bottom mb-16 border-t border-line-soft pt-6">
         <p className="flex items-center justify-center gap-2 text-xs text-ink-mute">
           Desarrollado por{' '}
           <a

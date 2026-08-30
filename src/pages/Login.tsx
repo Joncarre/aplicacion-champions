@@ -83,7 +83,7 @@ export default function Login() {
 
           {error ? <Alert tone="error">{error}</Alert> : null}
 
-          <button type="submit" className="btn-primary w-full" disabled={saving}>
+          <button type="submit" className="btn-primary btn-sm mx-auto block px-14" disabled={saving}>
             {saving ? <Spinner label="Entrando" /> : 'Entrar'}
           </button>
           </form>
