@@ -46,8 +46,15 @@ export const CHAMPIONS_FACTS: string[] = [
   'La Champions League es una continuación histórica de la Copa de Europa, por lo que los récords de ambas competiciones suelen analizarse conjuntamente, aunque la denominación “Champions League” solo se utiliza desde 1992.',
 ]
 
+/**
+ * Desde dónde arranca la rotación. Sirve para elegir con qué curiosidad se
+ * abre un día concreto sin tener que reordenar la lista entera.
+ */
+const ROTATION_OFFSET = 13
+
 /** Curiosidad correspondiente al día de hoy en hora de Madrid. */
 export function factOfTheDay(now: number = Date.now()): string {
-  const index = ((madridDayNumber(now) % CHAMPIONS_FACTS.length) + CHAMPIONS_FACTS.length) % CHAMPIONS_FACTS.length
+  const total = CHAMPIONS_FACTS.length
+  const index = (((madridDayNumber(now) + ROTATION_OFFSET) % total) + total) % total
   return CHAMPIONS_FACTS[index] ?? CHAMPIONS_FACTS[0] ?? ''
 }
