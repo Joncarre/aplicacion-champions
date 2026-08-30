@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
-  ArrowLeft,
   Check,
   KeyRound,
   RefreshCw,
@@ -22,16 +20,19 @@ import { getBackend, useDemoBackend } from '@/services/backend'
 import { setPassword } from '@/services/auth'
 import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
+import { BackButton } from '@/components/BackButton'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
+import { ExtrasPanel } from '@/components/admin/ExtrasPanel'
 import { TeamsPanel } from '@/components/admin/TeamsPanel'
 import { Alert, Field, PageHeader } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
-type Section = 'participantes' | 'resultados' | 'equipos' | 'calendario' | 'torneo'
+type Section = 'participantes' | 'resultados' | 'apuestas' | 'equipos' | 'calendario' | 'torneo'
 
 const SECTIONS: { value: Section; label: string }[] = [
   { value: 'participantes', label: 'Participantes' },
   { value: 'resultados', label: 'Resultados' },
+  { value: 'apuestas', label: 'Apuestas' },
   { value: 'equipos', label: 'Equipos' },
   { value: 'calendario', label: 'Calendario' },
   { value: 'torneo', label: 'Torneo' },
@@ -44,10 +45,7 @@ export default function Admin() {
   return (
     <>
       <div className="safe-top pt-5">
-        <Link to="/perfil" className="btn-quiet -ml-3 gap-1.5 px-3">
-          <ArrowLeft size={17} aria-hidden="true" />
-          Perfil
-        </Link>
+        <BackButton to="/perfil" label="Volver al perfil" />
       </div>
 
       <PageHeader title="Administración" />
@@ -80,6 +78,8 @@ export default function Admin() {
           <ParticipantsPanel />
         ) : section === 'resultados' ? (
           <ResultsPanel />
+        ) : section === 'apuestas' ? (
+          <ExtrasPanel />
         ) : section === 'equipos' ? (
           <TeamsPanel />
         ) : section === 'calendario' ? (

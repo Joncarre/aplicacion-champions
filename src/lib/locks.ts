@@ -60,9 +60,9 @@ export function lockReasonFor(
 }
 
 export const LOCK_MESSAGES: Record<NonNullable<LockReason>, string> = {
-  unpaid: 'Tienes que pagar la porra para poder apostar',
-  'future-matchday': 'Esta jornada se abrirá cuando termine la anterior',
-  'past-matchday': 'Esta jornada ya está cerrada',
+  unpaid: 'Pago pendiente',
+  'future-matchday': 'Abre al acabar la anterior',
+  'past-matchday': 'Jornada cerrada',
   'kicked-off': 'El partido ya ha empezado',
 }
 

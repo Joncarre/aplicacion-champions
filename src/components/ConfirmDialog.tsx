@@ -15,10 +15,10 @@ interface ConfirmDialogProps {
 /**
  * Diálogo de confirmación.
  *
- * Sube desde el borde inferior, que es donde está el pulgar, y se apoya en un
- * fondo desenfocado en vez de en un marco. Se cierra con Escape, tocando fuera
- * o con el botón de cancelar, que es donde entra el foco: la salida segura
- * siempre es la más fácil de alcanzar.
+ * Aparece abajo, a la altura del pulgar pero despejando la barra de
+ * navegación, sobre un fondo desenfocado y sin marco. Se cierra con Escape,
+ * tocando fuera o con el botón de cancelar, que es donde entra el foco: la
+ * salida segura siempre es la más fácil de alcanzar.
  */
 export function ConfirmDialog({
   title,
@@ -43,11 +43,11 @@ export function ConfirmDialog({
       aria-modal="true"
       aria-label={title}
       onClick={onCancel}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-base/80 p-4 backdrop-blur-md sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-base/80 px-4 pt-4 pb-28 backdrop-blur-md"
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="safe-bottom animate-page w-full max-w-xs rounded-3xl bg-surface px-6 pt-7 pb-6 text-center shadow-lift"
+        className="animate-page w-full max-w-xs rounded-3xl bg-surface px-6 pt-7 pb-6 text-center shadow-lift"
       >
         <span
           aria-hidden="true"

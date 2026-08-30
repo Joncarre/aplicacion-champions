@@ -40,6 +40,11 @@ export default function Welcome() {
             Iniciar sesión
           </Link>
         </Reveal>
+
+        <Reveal as="p" delay={320} className="mt-6 text-center font-mono text-[11px] leading-relaxed text-ink-mute">
+          Este proyecto se encuentra en desarrollo. Se admiten sugerencias sobre el diseño y pantallas de información
+          :)
+        </Reveal>
       </main>
 
       <footer className="safe-bottom mb-16 border-t border-line-soft pt-6">

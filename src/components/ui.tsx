@@ -171,3 +171,61 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
     </div>
   )
 }
+
+/* ────────────────────────────── Campo con subrayado ────────────────────────────── */
+
+interface UnderlineFieldProps {
+  id: string
+  label: string
+  error?: string
+  hint?: string
+  children: ReactNode
+}
+
+/**
+ * Campo de formulario sin caja: etiqueta en versalitas, el texto suelto y un
+ * trazo debajo que se enciende al escribir.
+ *
+ * Es el mismo lenguaje que el marcador de las jornadas y las apuestas
+ * especiales, así que rellenar un formulario se siente igual que apostar.
+ */
+export function UnderlineField({ id, label, error, hint, children }: UnderlineFieldProps) {
+  return (
+    <div className="group">
+      <label htmlFor={id} className="font-mono text-[10px] tracking-[0.14em] text-ink-mute uppercase">
+        {label}
+      </label>
+
+      <div className="relative mt-1">{children}</div>
+
+      {/*
+        La máscara apaga el trazo hacia la derecha, así que la línea se
+        desvanece en vez de cortarse en seco. Al ir por máscara y no por color,
+        vale igual para el estado normal, el de foco y el de error.
+      */}
+      <span
+        aria-hidden="true"
+        style={{
+          maskImage: 'linear-gradient(to right, black 0%, black 45%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to right, black 0%, black 45%, transparent 100%)',
+        }}
+        className={[
+          'block h-[2px] rounded-full transition-colors duration-200',
+          error ? 'bg-miss/70' : 'bg-line group-focus-within:bg-brand/70',
+        ].join(' ')}
+      />
+
+      {error ? (
+        <p id={`${id}-error`} className="mt-1.5 font-mono text-[10px] text-miss">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="mt-1.5 font-mono text-[10px] text-brand-soft">{hint}</p>
+      ) : null}
+    </div>
+  )
+}
+
+/** Clases del campo que va dentro de `UnderlineField`. */
+export const UNDERLINE_INPUT =
+  'w-full bg-transparent pb-2 text-base text-ink placeholder:text-ink-mute focus:outline-none disabled:opacity-50'

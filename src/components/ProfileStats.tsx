@@ -33,26 +33,24 @@ export function ProfileStats({
 
   return (
     <section>
-      <div className="flex items-baseline gap-2.5 px-1 pt-2 pb-4">
-        <span
+      {/* Centrado, igual que las tres columnas de abajo y que el título de la pantalla. */}
+      <div className="px-1 pt-1 pb-5 text-center">
+        <p className="font-mono text-[10px] tracking-[0.2em] text-ink-mute uppercase">Posición</p>
+        <p
           className={[
-            'font-mono text-2xl leading-none font-bold tabular-nums',
+            'mt-2 font-mono text-3xl leading-none font-bold tabular-nums',
             podium ? 'text-gold' : 'text-ink',
           ].join(' ')}
         >
           {position === null ? '–' : position}
-          <span className="text-base">º</span>
-        </span>
-
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] tracking-[0.2em] text-ink-mute uppercase">Posición</p>
-          <p className="mt-0.5 text-sm text-ink-soft">
-            de {participants} {participants === 1 ? 'participante' : 'participantes'}
-          </p>
-          {extraPoints > 0 ? (
-            <p className="mt-0.5 text-xs text-gold">+{extraPoints} de las apuestas especiales</p>
-          ) : null}
-        </div>
+          <span className="text-lg">º</span>
+        </p>
+        <p className="mt-2 font-mono text-[11px] text-ink-mute">
+          de {participants} {participants === 1 ? 'participante' : 'participantes'}
+        </p>
+        {extraPoints > 0 ? (
+          <p className="mt-1 font-mono text-[11px] text-gold">+{extraPoints} de las apuestas especiales</p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 divide-x divide-line-soft">

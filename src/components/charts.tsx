@@ -265,7 +265,7 @@ export function HitsDonut({ signHits, exactHits, missed }: HitsProps) {
                   className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: segment.color }}
                 />
-                <span className="truncate text-ink-soft">{segment.label}</span>
+                <span className="truncate font-mono text-[11px] text-ink-soft">{segment.label}</span>
               </span>
               <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-ink">{segment.value}</span>
             </li>
@@ -281,7 +281,7 @@ export function HitsDonut({ signHits, exactHits, missed }: HitsProps) {
 function ChartHeading({ title, detail }: { title: string; detail: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+      <h3 className="font-mono text-[13px] font-medium text-ink">{title}</h3>
       <span className="shrink-0 font-mono text-xs tabular-nums text-ink-mute">{detail}</span>
     </div>
   )

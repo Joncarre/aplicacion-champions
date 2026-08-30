@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { Alert, Field } from '@/components/ui'
+import { BackButton } from '@/components/BackButton'
 import { Reveal } from '@/components/Reveal'
 import { Spinner } from '@/components/Spinner'
+import { Alert, UNDERLINE_INPUT, UnderlineField } from '@/components/ui'
 
 export default function Login() {
   const { login } = useAuth()
@@ -32,39 +33,54 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-5 pb-12">
+    <div className="relative mx-auto flex min-h-dvh max-w-lg flex-col px-5 pb-12">
+      {/* El mismo resplandor de la bienvenida, para que la entrada no cambie de mundo. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 opacity-60"
+        style={{
+          background:
+            'radial-gradient(70% 55% at 50% 0%, color-mix(in oklab, var(--color-brand) 26%, transparent) 0%, transparent 70%)',
+        }}
+      />
+
       <div className="safe-top pt-5">
-        <Link to="/" className="btn-quiet -ml-3 gap-1.5 px-3">
-          <ArrowLeft size={17} aria-hidden="true" />
-          Volver
-        </Link>
+        <BackButton />
       </div>
 
-      <main className="flex-1 pt-6">
-        <h1 className="font-display text-4xl leading-tight font-extrabold tracking-tight text-ink">Iniciar sesión</h1>
-        <p className="mt-2 text-sm text-ink-soft">Con el nickname que elegiste al registrarte.</p>
+      <main className="flex flex-1 flex-col justify-center py-8">
+        <Reveal as="p" className="text-center font-mono text-[10px] tracking-[0.22em] text-gold uppercase">
+          Temporada 2026/27
+        </Reveal>
 
-        <Reveal className="mt-8">
-          <form onSubmit={onSubmit} className="space-y-5" noValidate>
-          <Field label="Nickname" htmlFor="nickname">
-            <input
-              id="nickname"
-              className="field lowercase"
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              disabled={saving}
-            />
-          </Field>
+        <Reveal
+          as="h1"
+          delay={80}
+          className="mt-3 text-center font-display text-3xl font-bold tracking-tight text-ink"
+        >
+          Bienvenido de vuelta
+        </Reveal>
 
-          <Field label="Contraseña" htmlFor="password">
-            <div className="relative">
+        <Reveal delay={160} className="mt-10">
+          <form onSubmit={onSubmit} className="space-y-7" noValidate>
+            <UnderlineField id="nickname" label="Nickname">
+              <input
+                id="nickname"
+                className={`${UNDERLINE_INPUT} lowercase`}
+                value={nickname}
+                onChange={(event) => setNickname(event.target.value)}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                disabled={saving}
+              />
+            </UnderlineField>
+
+            <UnderlineField id="password" label="Contraseña">
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                className="field pr-12"
+                className={`${UNDERLINE_INPUT} pr-11`}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
@@ -74,27 +90,26 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                className="absolute inset-y-0 right-0 grid w-12 place-items-center text-ink-mute hover:text-ink-soft"
+                className="absolute -top-1 right-0 grid size-10 place-items-center text-ink-mute hover:text-ink-soft"
               >
-                {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
               </button>
-            </div>
-          </Field>
+            </UnderlineField>
 
-          {error ? <Alert tone="error">{error}</Alert> : null}
+            {error ? <Alert tone="error">{error}</Alert> : null}
 
-          <button type="submit" className="btn-primary btn-sm mx-auto block px-14" disabled={saving}>
-            {saving ? <Spinner label="Entrando" /> : 'Entrar'}
-          </button>
+            <button type="submit" className="btn-primary btn-sm mx-auto block px-14" disabled={saving}>
+              {saving ? <Spinner label="Entrando" /> : 'Entrar'}
+            </button>
           </form>
         </Reveal>
 
-        <p className="mt-6 text-center text-sm text-ink-mute">
+        <Reveal as="p" delay={240} className="mt-10 text-center font-mono text-[11px] text-ink-mute">
           ¿Todavía no tienes cuenta?{' '}
           <Link to="/registro" className="font-semibold text-brand-soft hover:underline">
             Créala aquí
           </Link>
-        </p>
+        </Reveal>
       </main>
     </div>
   )

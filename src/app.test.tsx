@@ -9,6 +9,7 @@ import { clearSession } from './services/session'
 import { factOfTheDay } from './data/facts'
 import { now } from './lib/clock'
 import { TEAM_COUNT } from './data/teams'
+import { MATCHES_PER_MATCHDAY } from './data/calendar'
 
 /**
  * Prueba de humo de la interfaz. Monta la aplicación de verdad sobre el
@@ -189,7 +190,7 @@ describe('la aplicación', () => {
 
     await user.click(await screen.findByRole('link', { name: 'Jornadas' }))
 
-    expect(await screen.findByText(/pago pendiente/i)).toBeTruthy()
+    expect(await screen.findByText('Pago pendiente: no puedes apostar')).toBeTruthy()
     // Sin pagar no hay ni un solo campo editable.
     expect(screen.queryAllByRole('textbox')).toHaveLength(0)
   })
@@ -254,7 +255,7 @@ describe('la aplicación', () => {
     const again = await screen.findByRole('dialog', { name: /cerrar sesión/i })
     await user.click(within(again).getByRole('button', { name: 'Cerrar sesión' }))
 
-    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: /bienvenido de vuelta/i })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Perfil' })).toBeNull()
   })
 
@@ -278,5 +279,41 @@ describe('la aplicación', () => {
 
     await user.click(pendientes[0]!)
     await waitFor(() => expect(screen.queryAllByRole('button', { name: 'Sin pagar' })).toHaveLength(0))
+  })
+
+  it('deja al administrador meter resultados y recalcula los puntos', async () => {
+    const user = await loginAs('joncarre')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+    await user.click(await screen.findByRole('link', { name: /admin/i }))
+    await user.click(await screen.findByRole('button', { name: 'Resultados' }))
+
+    // Un campo de goles por equipo en los 18 partidos de la jornada.
+    const goles = await screen.findAllByRole('textbox')
+    expect(goles).toHaveLength(MATCHES_PER_MATCHDAY * 2)
+
+    await user.clear(goles[0]!)
+    await user.type(goles[0]!, '3')
+    await user.clear(goles[1]!)
+    await user.type(goles[1]!, '1')
+
+    // Al haber cambios aparece el botón de guardar, que recalcula la porra.
+    const guardar = await screen.findByRole('button', { name: /guardar 1 resultados/i })
+    await user.click(guardar)
+    expect(await screen.findByText(/recalculados/i)).toBeTruthy()
+  })
+
+  it('enseña al administrador las apuestas especiales de todos', async () => {
+    const user = await loginAs('joncarre')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+    await user.click(await screen.findByRole('link', { name: /admin/i }))
+    await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
+
+    // Una fila por participante, con su goleador y su campeón.
+    const main = screen.getByRole('main')
+    const filas = await within(main).findAllByRole('listitem')
+    expect(filas).toHaveLength(DEMO_NICKNAMES.length)
+    expect(within(filas[0]!).getByText(/^(joncarre|lucia|dani|marta|pablo|noa|raquel|sergio|elena|javi)$/)).toBeTruthy()
   })
 })

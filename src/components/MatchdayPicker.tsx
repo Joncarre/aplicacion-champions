@@ -29,7 +29,7 @@ export function MatchdayPicker({ value, onChange, currentMatchday }: MatchdayPic
   return (
     <section className="card overflow-hidden">
       <header className="flex items-baseline justify-between gap-3 px-4 pt-4">
-        <h2 className="font-display text-xl leading-none font-extrabold text-ink">Jornada {value}</h2>
+        <h2 className="font-display text-base leading-none font-medium text-ink">Jornada {value}</h2>
         <p className="font-mono text-[11px] whitespace-nowrap text-ink-mute">{selected?.label}</p>
       </header>
 
