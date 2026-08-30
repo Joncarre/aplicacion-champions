@@ -214,7 +214,7 @@
  */
 @utility card-live-gold {
   position: relative;
-  border: 2px solid transparent;
+  border: 1.5px solid transparent;
   border-radius: var(--radius-card);
   background:
     linear-gradient(

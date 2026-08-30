@@ -10,6 +10,7 @@ import { factOfTheDay } from './data/facts'
 import { now } from './lib/clock'
 import { TEAM_COUNT } from './data/teams'
 import { MATCHES_PER_MATCHDAY } from './data/calendar'
+import { ACHIEVEMENTS } from './lib/achievements'
 
 /**
  * Prueba de humo de la interfaz. Monta la aplicación de verdad sobre el
@@ -227,8 +228,7 @@ describe('la aplicación', () => {
     expect(screen.getByText('Pagado')).toBeTruthy()
     expect(screen.getByText(/miembro desde el/i)).toBeTruthy()
 
-    // La curiosidad del día, que es la misma para todos y cambia cada jornada.
-    expect(screen.getByText(/dato del día/i)).toBeVisible()
+    // La curiosidad del día, sin rótulo: solo la cita.
     expect(screen.getByText(factOfTheDay(now()))).toBeVisible()
 
     // Las tres gráficas de evolución.
@@ -237,23 +237,32 @@ describe('la aplicación', () => {
     expect(screen.getByRole('img', { name: /de \d+ pronósticos/i })).toBeTruthy()
   })
 
-  it('pide confirmación antes de cerrar la sesión', async () => {
+  it('muestra los logros, encendidos los conseguidos y apagados los demás', async () => {
+    const user = await loginAs('lucia')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+    await screen.findByRole('heading', { name: 'Perfil' })
+
+    expect(screen.getByText(/logros personales/i)).toBeVisible()
+
+    const insignias = screen.getAllByRole('img', { name: /conseguido|pendiente/i })
+    expect(insignias).toHaveLength(ACHIEVEMENTS.length)
+
+    // Lucía lideró la primera jornada, así que ese logro está encendido.
+    const lider = screen.getByRole('img', { name: /^Líder\. Conseguido/ })
+    expect(lider.className).toContain('grayscale-0')
+
+    // Y hay al menos uno pendiente, en gris.
+    const pendientes = screen.getAllByRole('img', { name: /Pendiente/ })
+    expect(pendientes.length).toBeGreaterThan(0)
+    expect(pendientes[0]!.className).toContain('grayscale')
+  })
+
+  it('cierra la sesión sin preguntar', async () => {
     const user = await loginAs('lucia')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
     await user.click(await screen.findByRole('button', { name: /cerrar sesión/i }))
-
-    const dialog = await screen.findByRole('dialog', { name: /cerrar sesión/i })
-
-    // Al cancelar, la sesión sigue abierta.
-    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(screen.getByRole('heading', { name: 'Perfil' })).toBeTruthy()
-
-    // Al confirmar, la zona privada deja de ser accesible y vuelve al acceso.
-    await user.click(screen.getByRole('button', { name: /cerrar sesión/i }))
-    const again = await screen.findByRole('dialog', { name: /cerrar sesión/i })
-    await user.click(within(again).getByRole('button', { name: 'Cerrar sesión' }))
 
     expect(await screen.findByRole('heading', { name: /bienvenido de vuelta/i })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Perfil' })).toBeNull()

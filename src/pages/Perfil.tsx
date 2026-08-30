@@ -11,11 +11,12 @@ import { formatFullDate } from '@/lib/date'
 import { areExtrasLocked } from '@/lib/locks'
 import { loadImage } from '@/lib/image'
 import { POINTS } from '@/lib/scoring'
+import { evaluateAchievements } from '@/lib/achievements'
 import { buildEvolution } from '@/lib/standings'
 import { getBackend } from '@/services/backend'
+import { Achievements } from '@/components/Achievements'
 import { Avatar } from '@/components/Avatar'
 import { AvatarEditor } from '@/components/AvatarEditor'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ProfileStats } from '@/components/ProfileStats'
 import { Reveal } from '@/components/Reveal'
 import { CumulativeChart, GapChart, HitsDonut } from '@/components/charts'
@@ -23,9 +24,8 @@ import { Alert, PageHeader } from '@/components/ui'
 
 export default function Perfil() {
   const { user, logout, refreshUser } = useAuth()
-  const { internalStandings, teams, myExtras, refresh } = useData()
+  const { internalStandings, teams, matches, myExtras, myPredictions, refresh } = useData()
   const now = useNow(60_000)
-  const [confirmingLogout, setConfirmingLogout] = useState(false)
 
   const me = useMemo(
     () => internalStandings.find((row) => row.user.id === user?.id),
@@ -35,6 +35,17 @@ export default function Perfil() {
   const evolution = useMemo(
     () => (user ? buildEvolution(user.id, internalStandings) : []),
     [user, internalStandings],
+  )
+
+  const achievements = useMemo(
+    () =>
+      evaluateAchievements({
+        userId: user?.id ?? '',
+        scores: internalStandings,
+        predictions: [...myPredictions.values()],
+        matches,
+      }),
+    [user?.id, internalStandings, myPredictions, matches],
   )
 
   if (!user) return null
@@ -74,6 +85,10 @@ export default function Perfil() {
         <SpecialBets user={user} teams={teams} extras={myExtras} now={now} onSaved={refresh} />
       </Reveal>
 
+      <Reveal>
+        <DailyFact now={now} />
+      </Reveal>
+
       <section className="mt-4 space-y-3">
         <Reveal>
           <CumulativeChart points={evolution} />
@@ -87,26 +102,15 @@ export default function Perfil() {
       </section>
 
       <Reveal>
-        <DailyFact now={now} />
+        <Achievements states={achievements} />
       </Reveal>
 
       <div className="mt-8 flex justify-center">
-        <button type="button" onClick={() => setConfirmingLogout(true)} className="btn-ghost btn-sm text-miss">
+        <button type="button" onClick={logout} className="btn-ghost btn-sm text-miss">
           <LogOut size={15} aria-hidden="true" />
           Cerrar sesión
         </button>
       </div>
-
-      {confirmingLogout ? (
-        <ConfirmDialog
-          title="¿Cerrar sesión?"
-          description="Tendrás que volver a entrar con tu nickname y tu contraseña. Tus apuestas guardadas no se pierden."
-          confirmLabel="Cerrar sesión"
-          destructive
-          onConfirm={logout}
-          onCancel={() => setConfirmingLogout(false)}
-        />
-      ) : null}
     </>
   )
 }
@@ -373,33 +377,27 @@ function DailyFact({ now }: { now: number }) {
   const fact = factOfTheDay(now)
 
   return (
-    <section className="mt-6">
-      <figure className="card-live-gold relative overflow-hidden p-5">
-        {/* Resplandor dorado en la esquina, para que no sea una tarjeta más. */}
+    <section className="mt-5">
+      {/* Sin rótulo: la comilla y la cursiva ya dicen que es una cita. */}
+      <figure className="card-live-gold relative overflow-hidden px-4 py-3.5">
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -top-16 -right-12 size-44 rounded-full opacity-50"
+          className="pointer-events-none absolute -top-12 -right-10 size-32 rounded-full opacity-50"
           style={{
             background:
-              'radial-gradient(circle, color-mix(in oklab, var(--color-gold) 26%, transparent) 0%, transparent 70%)',
+              'radial-gradient(circle, color-mix(in oklab, var(--color-gold) 24%, transparent) 0%, transparent 70%)',
           }}
         />
 
-        <figcaption className="relative flex items-center gap-2">
-          <span aria-hidden="true" className="h-px w-6 bg-gold/50" />
-          <span className="font-mono text-[10px] tracking-[0.2em] text-gold uppercase">Dato del día</span>
-        </figcaption>
-
-        <blockquote className="relative mt-3">
+        <blockquote className="relative">
           <span
             aria-hidden="true"
-            className="absolute -top-4 -left-1 font-display text-6xl leading-none text-gold/20"
+            className="absolute -top-2.5 -left-0.5 font-display text-4xl leading-none text-gold/25"
           >
             &ldquo;
           </span>
-          <p className="relative pl-6 font-display text-[13.5px] leading-relaxed text-ink-soft italic">{fact}</p>
+          <p className="relative pl-5 font-display text-xs leading-relaxed text-ink-soft italic">{fact}</p>
         </blockquote>
-
       </figure>
     </section>
   )
