@@ -17,6 +17,10 @@ rules_version = '2';
 // Si algún día la porra se abre fuera del círculo de amigos, el cambio a hacer
 // es migrar a Firebase Auth y sustituir estas reglas por otras basadas en
 // `request.auth.uid`.
+//
+// Nota sobre el borrado: se concede aparte y nunca dentro de `allow write`.
+// En un borrado `request.resource` es nulo, así que cualquier comprobación
+// sobre `request.resource.data` da error y el borrado se deniega en silencio.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -31,6 +35,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if true;
+      allow delete: if true;
+
       allow create: if request.resource.data.keys().hasAll(
                          ['id', 'nickname', 'nombre', 'apellidos', 'passwordHash', 'passwordSalt', 'isAdmin', 'hasPaid', 'createdAt'])
                     && request.resource.data.id == userId
@@ -43,62 +49,60 @@ service cloud.firestore {
                     && request.resource.data.hasPaid is bool
                     // Nadie se registra ya pagado: eso lo marca el admin después.
                     && request.resource.data.hasPaid == false;
+
       allow update: if request.resource.data.id == resource.data.id
                     && request.resource.data.nickname == resource.data.nickname
                     // La foto va incrustada como data URL: se limita para no
                     // acercarse al tope de 1 MB por documento.
                     && (request.resource.data.photo == null
                         || isString(request.resource.data.photo, 400000));
-      allow delete: if true;
     }
 
     match /teams/{teamId} {
       allow read: if true;
-      allow write: if request.resource.data == null
-                   || (isString(request.resource.data.id, 60)
-                       && isString(request.resource.data.name, 60)
-                       && isString(request.resource.data.league, 60));
+      allow delete: if true;
+      allow create, update: if isString(request.resource.data.id, 60)
+                            && isString(request.resource.data.name, 60)
+                            && isString(request.resource.data.league, 60);
     }
 
     match /matches/{matchId} {
       allow read: if true;
-      allow write: if request.resource.data == null
-                   || (request.resource.data.matchday is int
-                       && request.resource.data.matchday >= 1
-                       && request.resource.data.matchday <= 8
-                       && request.resource.data.kickoff is int
-                       && isGoals(request.resource.data.homeGoals)
-                       && isGoals(request.resource.data.awayGoals));
+      allow delete: if true;
+      allow create, update: if request.resource.data.matchday is int
+                            && request.resource.data.matchday >= 1
+                            && request.resource.data.matchday <= 8
+                            && request.resource.data.kickoff is int
+                            && isGoals(request.resource.data.homeGoals)
+                            && isGoals(request.resource.data.awayGoals);
     }
 
     match /predictions/{predictionId} {
       allow read: if true;
-      allow write: if request.resource.data == null
-                   || (predictionId == request.resource.data.userId + '__' + request.resource.data.matchId
-                       && request.resource.data.homeGoals is int
-                       && request.resource.data.homeGoals >= 0
-                       && request.resource.data.homeGoals <= 99
-                       && request.resource.data.awayGoals is int
-                       && request.resource.data.awayGoals >= 0
-                       && request.resource.data.awayGoals <= 99);
+      allow delete: if true;
+      allow create, update: if predictionId == request.resource.data.userId + '__' + request.resource.data.matchId
+                            && request.resource.data.homeGoals is int
+                            && request.resource.data.homeGoals >= 0
+                            && request.resource.data.homeGoals <= 99
+                            && request.resource.data.awayGoals is int
+                            && request.resource.data.awayGoals >= 0
+                            && request.resource.data.awayGoals <= 99;
     }
 
     match /extras/{userId} {
       allow read: if true;
-      allow write: if request.resource.data == null
-                   || (request.resource.data.userId == userId
-                       && isString(request.resource.data.topScorer, 80)
-                       && isString(request.resource.data.champion, 80));
+      allow delete: if true;
+      allow create, update: if request.resource.data.userId == userId
+                            && isString(request.resource.data.topScorer, 80)
+                            && isString(request.resource.data.champion, 80);
     }
 
     match /scores/{userId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     match /config/{document} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     // Cualquier otra colección queda cerrada.
