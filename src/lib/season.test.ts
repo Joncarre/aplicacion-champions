@@ -181,7 +181,9 @@ describe('temporada completa sobre el calendario oficial', () => {
   })
 
   it('suma el goleador y el campeón encima de los puntos de los partidos', () => {
-    const extras: Extras[] = [{ userId: 'ana', topScorer: 'Kylian Mbappé', champion: 'Real Madrid' }]
+    const extras: Extras[] = [
+      { userId: 'ana', topScorer: 'Kylian Mbappé', champion: 'Real Madrid', updatedAt: 0 },
+    ]
     const config: TournamentConfig = {
       ...CONFIG,
       actualTopScorer: 'Mbappé',
