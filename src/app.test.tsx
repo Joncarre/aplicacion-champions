@@ -74,7 +74,12 @@ describe('la aplicación', () => {
     await user.type(screen.getByLabelText('Contraseña'), 'secreta')
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
-    expect(await screen.findByText(/cuenta creada/i)).toBeVisible()
+    // El aviso se queda hasta que se acepta, con el nickname a la vista: es lo
+    // único que luego no se puede recuperar desde la aplicación.
+    const aviso = await screen.findByRole('dialog')
+    expect(within(aviso).getByText(/cuenta creada/i)).toBeVisible()
+    expect(within(aviso).getByText('ivanp')).toBeVisible()
+    expect(within(aviso).getByRole('button', { name: 'Aceptar' })).toBeVisible()
   })
 
   it('rechaza el registro con datos incompletos sin llamar al backend', async () => {

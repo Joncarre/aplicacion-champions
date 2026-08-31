@@ -6,7 +6,7 @@ import { useData } from '@/context/DataContext'
 import { useNow } from '@/hooks/useNow'
 import { EXTRAS_DEADLINE } from '@/data/calendar'
 import { factOfTheDay } from '@/data/facts'
-import { formatFullDate } from '@/lib/date'
+import { formatFullDate, formatShortDate } from '@/lib/date'
 import { areExtrasLocked } from '@/lib/locks'
 import { loadImage } from '@/lib/image'
 import { POINTS } from '@/lib/scoring'
@@ -201,7 +201,7 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
           <p className="truncate text-sm text-ink-soft">
             {user.nombre} {user.apellidos}
           </p>
-          <p className="mt-1 text-xs text-ink-mute">Miembro desde el {formatFullDate(user.createdAt)}</p>
+          <p className="mt-1 text-xs text-ink-mute">Miembro desde el {formatShortDate(user.createdAt)}</p>
         </div>
       </div>
 

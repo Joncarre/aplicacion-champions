@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import type { EvolutionPoint } from '@/lib/standings'
 
 /**
@@ -53,7 +53,7 @@ function axisTicks(max: number, intervals: number): number[] {
 export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
   const gradientId = useId()
   const played = points.filter((point) => point.played)
-  if (played.length === 0) return <ChartPlaceholder />
+  if (played.length === 0) return <ChartPlaceholder>Tus puntos empezarán a sumar con la primera jornada.</ChartPlaceholder>
 
   const ticks = axisTicks(Math.max(1, ...played.map((point) => point.maxCumulative)), 4)
   const ceiling = ticks[ticks.length - 1] ?? 1
@@ -123,7 +123,7 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 export function GapChart({ points }: { points: EvolutionPoint[] }) {
   const gradientId = useId()
   const played = points.filter((point) => point.played)
-  if (played.length === 0) return <ChartPlaceholder />
+  if (played.length === 0) return <ChartPlaceholder>Todavía no hay líder del que descolgarse.</ChartPlaceholder>
 
   const ticks = axisTicks(Math.max(1, ...played.map((point) => point.leaderCumulative)), 4)
   const ceiling = ticks[ticks.length - 1] ?? 1
@@ -211,7 +211,7 @@ interface HitsProps {
 /** Cómo se reparten tus pronósticos entre exactos, de signo y fallados. */
 export function HitsDonut({ signHits, exactHits, missed }: HitsProps) {
   const total = signHits + exactHits + missed
-  if (total === 0) return <ChartPlaceholder />
+  if (total === 0) return <ChartPlaceholder>Aún no se ha resuelto ninguno de tus pronósticos.</ChartPlaceholder>
 
   const radius = 54
   const circumference = 2 * Math.PI * radius
@@ -344,12 +344,14 @@ function XAxis({ points }: { points: EvolutionPoint[] }) {
   )
 }
 
-function ChartPlaceholder() {
+/**
+ * Hueco de una gráfica todavía sin datos. Cada una cuenta lo suyo: repetir
+ * tres veces el mismo aviso genérico no decía qué se iba a ver en cada sitio.
+ */
+function ChartPlaceholder({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-36 place-items-center px-4 py-8 text-center">
-      <p className="max-w-56 text-sm text-balance text-ink-mute">
-        Aquí aparecerá tu evolución en cuanto se juegue la primera jornada.
-      </p>
+      <p className="max-w-56 text-sm text-balance text-ink-mute">{children}</p>
     </div>
   )
 }

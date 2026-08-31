@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatTime, madridDayKey, madridToUtc } from './date'
+import { formatShortDate, formatTime, madridDayKey, madridToUtc } from './date'
 
 describe('madridToUtc', () => {
   it('interpreta el horario de verano (CEST, UTC+2)', () => {
@@ -28,6 +28,12 @@ describe('formateo', () => {
   it('agrupa por día natural español', () => {
     // 00:30 en Madrid sigue siendo el día anterior en UTC.
     expect(madridDayKey(madridToUtc('2026-09-09T00:30'))).toBe('2026-09-09')
+  })
+
+  it('escribe la fecha corta con día, mes y año de dos cifras', () => {
+    expect(formatShortDate(madridToUtc('2026-08-31T12:00'))).toBe('31/08/26')
+    // Y también en la madrugada, que en UTC ya es el día anterior.
+    expect(formatShortDate(madridToUtc('2027-01-01T00:30'))).toBe('01/01/27')
   })
 })
 

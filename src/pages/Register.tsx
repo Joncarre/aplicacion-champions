@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Check, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { MIN_PASSWORD_LENGTH, normalizeNickname, validateRegistration, type RegisterInput } from '@/services/auth'
 import { BackButton } from '@/components/BackButton'
@@ -9,9 +9,6 @@ import { Spinner } from '@/components/Spinner'
 import { Alert, UNDERLINE_INPUT, UnderlineField } from '@/components/ui'
 
 const EMPTY: RegisterInput = { nombre: '', apellidos: '', nickname: '', password: '' }
-
-/** Tras crear la cuenta se vuelve a Bienvenida, con un respiro para leer el aviso. */
-const REDIRECT_DELAY = 2200
 
 export default function Register() {
   const { register } = useAuth()
@@ -22,14 +19,8 @@ export default function Register() {
   const [status, setStatus] = useState<'idle' | 'saving' | 'done'>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current)
-    },
-    [],
-  )
+  /** Nickname ya normalizado, que es con el que tendrá que entrar. */
+  const [created, setCreated] = useState<string | null>(null)
 
   const update = (field: keyof RegisterInput) => (event: { target: { value: string } }) => {
     setForm((current) => ({ ...current, [field]: event.target.value }))
@@ -51,9 +42,8 @@ export default function Register() {
     setMessage(null)
     try {
       await register(form)
+      setCreated(normalizeNickname(form.nickname))
       setStatus('done')
-      setMessage(`¡Cuenta creada! Entra como ${normalizeNickname(form.nickname)}.`)
-      timer.current = setTimeout(() => navigate('/'), REDIRECT_DELAY)
     } catch (cause) {
       setStatus('idle')
       setMessage(cause instanceof Error ? cause.message : 'No se ha podido crear la cuenta')
@@ -168,7 +158,7 @@ export default function Register() {
               </button>
             </UnderlineField>
 
-            {message ? <Alert tone={status === 'done' ? 'success' : 'error'}>{message}</Alert> : null}
+            {message ? <Alert tone="error">{message}</Alert> : null}
 
             <button type="submit" className="btn-primary btn-sm mx-auto block px-14" disabled={disabled}>
               {status === 'saving' ? <Spinner label="Creando la cuenta" /> : 'Crear cuenta'}
@@ -183,6 +173,42 @@ export default function Register() {
           </Link>
         </p>
       </main>
+
+      {/*
+        El nickname es lo único que no se puede recuperar desde la app: se
+        normaliza al guardarlo y con él se inicia sesión. Así que en vez de un
+        aviso que se va solo, la cuenta se estrena con una tarjeta en el centro
+        que hay que cerrar a mano, y ahí queda escrito.
+      */}
+      {created ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cuenta-creada"
+          className="fixed inset-0 z-50 grid place-items-center bg-base/85 px-6 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-xs rounded-3xl border border-line bg-surface p-7 text-center shadow-lift">
+            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-exact/12 text-exact">
+              <Check size={26} aria-hidden="true" />
+            </span>
+
+            <h2 id="cuenta-creada" className="mt-5 font-display text-xl font-bold text-ink">
+              ¡Cuenta creada!
+            </h2>
+
+            <p className="mt-2.5 text-sm leading-relaxed text-balance text-ink-soft">
+              Recuerda usar tu nickname{' '}
+              <strong className="font-mono font-semibold text-brand-soft">{created}</strong> para iniciar sesión.
+            </p>
+
+            <span aria-hidden="true" className="rule-taper mx-auto mt-5 block w-20" />
+
+            <button type="button" autoFocus onClick={() => navigate('/')} className="btn-primary btn-sm mt-5 w-full">
+              Aceptar
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

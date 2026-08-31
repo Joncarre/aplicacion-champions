@@ -62,6 +62,7 @@ const timeFmt = fmt({ hour: '2-digit', minute: '2-digit', hour12: false })
 const dayFmt = fmt({ weekday: 'short', day: 'numeric', month: 'short' })
 const longDayFmt = fmt({ weekday: 'long', day: 'numeric', month: 'long' })
 const fullFmt = fmt({ day: 'numeric', month: 'long', year: 'numeric' })
+const shortFmt = fmt({ day: '2-digit', month: '2-digit', year: '2-digit' })
 const dayKeyFmt = fmt({ year: 'numeric', month: '2-digit', day: '2-digit' })
 
 /** `21:00` */
@@ -75,6 +76,9 @@ export const formatLongDay = (ms: number): string => capitalize(longDayFmt.forma
 
 /** `9 de septiembre de 2026` */
 export const formatFullDate = (ms: number): string => fullFmt.format(ms)
+
+/** `31/08/26` */
+export const formatShortDate = (ms: number): string => shortFmt.format(ms)
 
 /** Clave estable `YYYY-MM-DD` en hora de Madrid, para agrupar partidos por día. */
 export function madridDayKey(ms: number): string {
