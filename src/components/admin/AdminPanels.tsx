@@ -20,11 +20,10 @@ import { getBackend, useDemoBackend } from '@/services/backend'
 import { setPassword } from '@/services/auth'
 import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
-import { BackButton } from '@/components/BackButton'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
-import { ExtrasPanel } from '@/components/admin/ExtrasPanel'
-import { TeamsPanel } from '@/components/admin/TeamsPanel'
-import { Alert, Field, PageHeader } from '@/components/ui'
+import { ExtrasPanel } from './ExtrasPanel'
+import { TeamsPanel } from './TeamsPanel'
+import { Alert, Field } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
 type Section = 'participantes' | 'resultados' | 'apuestas' | 'equipos' | 'calendario' | 'torneo'
@@ -38,19 +37,24 @@ const SECTIONS: { value: Section; label: string }[] = [
   { value: 'torneo', label: 'Torneo' },
 ]
 
-export default function Admin() {
+/**
+ * Panel de administración, incrustado en el perfil del administrador.
+ *
+ * No es una pantalla aparte porque el administrador no participa en la porra:
+ * su perfil no tiene posición ni gráficas, así que este es su contenido.
+ */
+export default function AdminPanels() {
   const [section, setSection] = useState<Section>('participantes')
   const { loading } = useData()
 
   return (
-    <>
-      <div className="safe-top pt-5">
-        <BackButton to="/perfil" label="Volver al perfil" />
-      </div>
+    <section className="mt-6">
+      <h2 className="text-center font-mono text-[11px] font-semibold tracking-[0.18em] text-gold uppercase">
+        Administración
+      </h2>
+      <span aria-hidden="true" className="rule-taper mt-2.5 block" />
 
-      <PageHeader title="Administración" />
-
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SECTIONS.map((item) => (
           <button
             key={item.value}
@@ -58,10 +62,8 @@ export default function Admin() {
             onClick={() => setSection(item.value)}
             aria-current={section === item.value}
             className={[
-              'min-h-10 shrink-0 rounded-lg border px-3.5 text-sm font-semibold transition-colors',
-              section === item.value
-                ? 'border-brand/50 bg-brand/12 text-ink'
-                : 'border-line bg-surface text-ink-mute hover:text-ink-soft',
+              'min-h-9 shrink-0 rounded-full px-3.5 font-mono text-xs font-semibold transition-colors',
+              section === item.value ? 'bg-brand/22 text-brand-light' : 'bg-surface text-ink-mute hover:text-ink-soft',
             ].join(' ')}
           >
             {item.label}
@@ -88,7 +90,7 @@ export default function Admin() {
           <TournamentPanel />
         )}
       </div>
-    </>
+    </section>
   )
 }
 

@@ -131,10 +131,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   /**
    * Tabla de la porra. Se apoya en las puntuaciones ya calculadas, pero cubre
    * también a quien se acaba de registrar y todavía no tiene documento propio.
+   *
+   * El administrador queda fuera: no participa, así que ni aparece en la tabla
+   * ni cuenta como líder a la hora de medir al resto.
    */
   const internalStandings = useMemo<InternalRow[]>(() => {
     const byUser = new Map(scores.map((score) => [score.userId, score]))
     return users
+      .filter((participant) => !participant.isAdmin)
       .map((participant) => ({
         user: participant,
         ...(byUser.get(participant.id) ?? emptyScore(participant.id)),

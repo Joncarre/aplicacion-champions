@@ -39,10 +39,3 @@ export function PublicLayout() {
     </div>
   )
 }
-
-/** Solo para el panel de administración. */
-export function AdminOnly({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
-  if (!user?.isAdmin) return <Navigate to="/clasificacion" replace />
-  return <>{children}</>
-}

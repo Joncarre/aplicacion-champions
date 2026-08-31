@@ -72,6 +72,9 @@ const DEMO_PROFILES: DemoProfile[] = [
 /** Nicknames de prueba, para que los tests no dependan de una lista escrita a mano. */
 export const DEMO_NICKNAMES = DEMO_PROFILES.map((profile) => profile.nickname)
 
+/** Los que juegan de verdad: el administrador no entra en la clasificación. */
+export const DEMO_PARTICIPANTS = DEMO_PROFILES.filter((p) => !p.isAdmin).map((p) => p.nickname)
+
 /** Los que aún no han pagado, que es lo que el admin tiene que marcar. */
 export const DEMO_UNPAID = DEMO_PROFILES.filter((profile) => !profile.hasPaid).map((p) => p.nickname)
 

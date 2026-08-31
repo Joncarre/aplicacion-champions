@@ -1,6 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Camera, LogOut, Settings } from 'lucide-react'
+import { Suspense, lazy, useMemo, useRef, useState } from 'react'
+import { Camera, LogOut } from 'lucide-react'
 import type { Extras, PublicUser, Team } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
@@ -21,6 +20,10 @@ import { ProfileStats } from '@/components/ProfileStats'
 import { Reveal } from '@/components/Reveal'
 import { CumulativeChart, GapChart, HitsDonut } from '@/components/charts'
 import { Alert, PageHeader } from '@/components/ui'
+import { Spinner } from '@/components/Spinner'
+
+// Solo lo abre una persona: no tiene sentido cargarlo con el resto de la app.
+const AdminPanels = lazy(() => import('@/components/admin/AdminPanels'))
 
 export default function Perfil() {
   const { user, logout, refreshUser } = useAuth()
@@ -56,54 +59,63 @@ export default function Perfil() {
 
   return (
     <>
-      <PageHeader
-        title="Perfil"
-        action={
-          user.isAdmin ? (
-            <Link to="/admin" className="btn-ghost min-h-11 px-3.5 text-xs">
-              <Settings size={15} aria-hidden="true" />
-              Admin
-            </Link>
-          ) : null
-        }
-      />
+      <PageHeader title="Perfil" />
 
       <IdentityCard user={user} onPhotoSaved={refreshUser} />
 
-      <Reveal className="mt-4">
-        <ProfileStats
-          position={me?.position ?? null}
-          participants={internalStandings.length}
-          totalPoints={me?.totalPoints ?? 0}
-          exactHits={me?.exactHits ?? 0}
-          signHits={me?.signHits ?? 0}
-          extraPoints={me?.extraPoints ?? 0}
-        />
-      </Reveal>
+      {/*
+        El perfil se bifurca. El administrador no juega la porra, así que su
+        posición, sus gráficas y sus logros no tendrían nada que contar: en su
+        lugar lleva encima el panel de gestión, que es lo que sí usa a diario.
+      */}
+      {user.isAdmin ? (
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-16">
+              <Spinner label="Abriendo el panel" />
+            </div>
+          }
+        >
+          <AdminPanels />
+        </Suspense>
+      ) : (
+        <>
+          <Reveal className="mt-4">
+            <ProfileStats
+              position={me?.position ?? null}
+              participants={internalStandings.length}
+              totalPoints={me?.totalPoints ?? 0}
+              exactHits={me?.exactHits ?? 0}
+              signHits={me?.signHits ?? 0}
+              extraPoints={me?.extraPoints ?? 0}
+            />
+          </Reveal>
 
-      <Reveal>
-        <SpecialBets user={user} teams={teams} extras={myExtras} now={now} onSaved={refresh} />
-      </Reveal>
+          <Reveal>
+            <SpecialBets user={user} teams={teams} extras={myExtras} now={now} onSaved={refresh} />
+          </Reveal>
 
-      <Reveal>
-        <DailyFact now={now} />
-      </Reveal>
+          <Reveal>
+            <DailyFact now={now} />
+          </Reveal>
 
-      <section className="mt-4 space-y-3">
-        <Reveal>
-          <CumulativeChart points={evolution} />
-        </Reveal>
-        <Reveal>
-          <GapChart points={evolution} />
-        </Reveal>
-        <Reveal>
-          <HitsDonut signHits={me?.signHits ?? 0} exactHits={me?.exactHits ?? 0} missed={missed} />
-        </Reveal>
-      </section>
+          <section className="mt-4 space-y-3">
+            <Reveal>
+              <CumulativeChart points={evolution} />
+            </Reveal>
+            <Reveal>
+              <GapChart points={evolution} />
+            </Reveal>
+            <Reveal>
+              <HitsDonut signHits={me?.signHits ?? 0} exactHits={me?.exactHits ?? 0} missed={missed} />
+            </Reveal>
+          </section>
 
-      <Reveal>
-        <Achievements states={achievements} />
-      </Reveal>
+          <Reveal>
+            <Achievements states={achievements} />
+          </Reveal>
+        </>
+      )}
 
       <div className="mt-8 flex justify-center">
         <button type="button" onClick={logout} className="btn-ghost btn-sm text-miss">
@@ -183,7 +195,8 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
           {/* Alineado a la línea base del nickname, no a su centro vertical. */}
           <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <p className="truncate font-display text-2xl leading-tight font-extrabold text-ink">{user.nickname}</p>
-            <PaymentBadge paid={user.hasPaid} />
+            {/* Al administrador no le corresponde estado de pago: no juega. */}
+            {user.isAdmin ? <RoleBadge /> : <PaymentBadge paid={user.hasPaid} />}
           </div>
           <p className="truncate text-sm text-ink-soft">
             {user.nombre} {user.apellidos}
@@ -202,6 +215,15 @@ function IdentityCard({ user, onPhotoSaved }: { user: PublicUser; onPhotoSaved: 
         <AvatarEditor image={editing} saving={saving} onCancel={closeEditor} onConfirm={confirm} />
       ) : null}
     </section>
+  )
+}
+
+/** El administrador se identifica como tal, ya que no le corresponde pagar. */
+function RoleBadge() {
+  return (
+    <span className="shrink-0 font-mono text-[10px] font-semibold tracking-[0.14em] text-brand-soft uppercase">
+      Administrador
+    </span>
   )
 }
 

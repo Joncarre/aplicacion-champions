@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
-import { DEMO_NICKNAMES, DEMO_UNPAID, resetDemoData } from './services/demoBackend'
+import { DEMO_PARTICIPANTS, DEMO_UNPAID, resetDemoData } from './services/demoBackend'
 import { clearSession } from './services/session'
 import { factOfTheDay } from './data/facts'
 import { now } from './lib/clock'
@@ -37,7 +37,7 @@ async function loginAs(nickname: string) {
   // La sesión arranca en Clasificación; se espera a que los datos estén dentro
   // para que las comprobaciones no lleguen antes que la carga.
   await screen.findByRole('heading', { name: 'Clasificación' })
-  await screen.findByText('joncarre')
+  await screen.findByText('lucia')
 
   return user
 }
@@ -126,9 +126,10 @@ describe('la aplicación', () => {
 
     expect(await screen.findByRole('heading', { name: 'Clasificación' })).toBeTruthy()
 
-    // Todos los participantes de prueba.
-    const nicknames = new RegExp('^(' + DEMO_NICKNAMES.join('|') + ')$')
-    expect(await screen.findAllByText(nicknames)).toHaveLength(DEMO_NICKNAMES.length)
+    // Todos los participantes, y el administrador fuera: no juega la porra.
+    const nicknames = new RegExp('^(' + DEMO_PARTICIPANTS.join('|') + ')$')
+    expect(await screen.findAllByText(nicknames)).toHaveLength(DEMO_PARTICIPANTS.length)
+    expect(screen.queryByText('joncarre')).toBeNull()
 
     // La fila de quien mira se distingue por el borde animado, sin etiqueta.
     expect(screen.getByText('lucia').closest('li')).toHaveClass('card-live')
@@ -268,21 +269,37 @@ describe('la aplicación', () => {
     expect(screen.queryByRole('heading', { name: 'Perfil' })).toBeNull()
   })
 
-  it('deja el panel de administración solo al administrador', async () => {
+  it('el perfil del participante no lleva panel de administración', async () => {
     const user = await loginAs('lucia')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
     await screen.findByRole('heading', { name: 'Perfil' })
-    expect(screen.queryByRole('link', { name: /admin/i })).toBeNull()
+    expect(screen.queryByText(/^Administración$/)).toBeNull()
   })
 
-  it('deja al administrador marcar pagos desde su panel', async () => {
+  it('el perfil del administrador es su panel, sin posición ni gráficas', async () => {
     const user = await loginAs('joncarre')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
-    await user.click(await screen.findByRole('link', { name: /admin/i }))
+    await screen.findByRole('heading', { name: 'Perfil' })
 
-    expect(await screen.findByRole('heading', { name: 'Administración' })).toBeTruthy()
+    // El panel de gestión va incrustado, no detrás de un enlace.
+    expect(await screen.findByText(/^Administración$/)).toBeVisible()
+    expect(screen.getByText(/^Administrador$/)).toBeVisible()
+
+    // Y nada de lo que es propio de un participante.
+    expect(screen.queryByText(/^Posición$/)).toBeNull()
+    expect(screen.queryByText(/logros personales/i)).toBeNull()
+    expect(screen.queryByText(/apuestas especiales/i)).toBeNull()
+    expect(screen.queryByRole('img', { name: /puntos acumulados/i })).toBeNull()
+    expect(screen.queryByText(factOfTheDay(now()))).toBeNull()
+  })
+
+  it('deja al administrador marcar pagos desde su perfil', async () => {
+    const user = await loginAs('joncarre')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+
     const pendientes = await screen.findAllByRole('button', { name: 'Sin pagar' })
     expect(pendientes).toHaveLength(DEMO_UNPAID.length)
 
@@ -294,7 +311,6 @@ describe('la aplicación', () => {
     const user = await loginAs('joncarre')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
-    await user.click(await screen.findByRole('link', { name: /admin/i }))
     await user.click(await screen.findByRole('button', { name: 'Resultados' }))
 
     // Un campo de goles por equipo en los 18 partidos de la jornada.
@@ -307,8 +323,7 @@ describe('la aplicación', () => {
     await user.type(goles[1]!, '1')
 
     // Al haber cambios aparece el botón de guardar, que recalcula la porra.
-    const guardar = await screen.findByRole('button', { name: /guardar 1 resultados/i })
-    await user.click(guardar)
+    await user.click(await screen.findByRole('button', { name: /guardar 1 resultados/i }))
     expect(await screen.findByText(/recalculados/i)).toBeTruthy()
   })
 
@@ -316,13 +331,11 @@ describe('la aplicación', () => {
     const user = await loginAs('joncarre')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
-    await user.click(await screen.findByRole('link', { name: /admin/i }))
     await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
 
-    // Una fila por participante, con su goleador y su campeón.
+    // Una fila por participante. Aquí sí sale el admin: es la lista de usuarios.
     const main = screen.getByRole('main')
     const filas = await within(main).findAllByRole('listitem')
-    expect(filas).toHaveLength(DEMO_NICKNAMES.length)
-    expect(within(filas[0]!).getByText(/^(joncarre|lucia|dani|marta|pablo|noa|raquel|sergio|elena|javi)$/)).toBeTruthy()
+    expect(filas).toHaveLength(DEMO_PARTICIPANTS.length + 1)
   })
 })
