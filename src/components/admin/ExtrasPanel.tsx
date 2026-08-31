@@ -17,7 +17,9 @@ export function ExtrasPanel() {
   const rows = useMemo(() => {
     const byUser = new Map(extras.map((entry) => [entry.userId, entry]))
 
+    // El administrador no apuesta, así que no cuenta como pendiente.
     return users
+      .filter((user) => !user.isAdmin)
       .map((user) => {
         const bet = byUser.get(user.id)
         const topScorer = bet?.topScorer?.trim() ?? ''
@@ -42,9 +44,7 @@ export function ExtrasPanel() {
         <Alert tone="info">
           Oficial: {config.actualTopScorer ?? 'goleador sin fijar'} · {config.actualChampion ?? 'campeón sin fijar'}
         </Alert>
-      ) : (
-        <Alert tone="pending">Fija los aciertos en la pestaña Torneo</Alert>
-      )}
+      ) : null}
 
       {missing > 0 ? (
         <Alert tone="warning">

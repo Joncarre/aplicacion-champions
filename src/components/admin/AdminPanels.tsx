@@ -1,35 +1,24 @@
 import { useMemo, useState } from 'react'
-import {
-  Check,
-  RefreshCw,
-  ShieldCheck,
-  RotateCcw,
-  Wallet,
-  Wand,
-} from 'lucide-react'
+import { Check, RefreshCw, ShieldCheck, Wallet, Workflow } from 'lucide-react'
 import type { Match, PublicUser, TournamentConfig } from '@/types'
 import { useData } from '@/context/DataContext'
-import { DEFAULT_TEAMS } from '@/data/teams'
-import { buildOfficialMatches } from '@/data/fixtures'
 import { MATCHDAY_WINDOWS } from '@/data/calendar'
-import { madridToUtc, toDateTimeInputValue } from '@/lib/date'
-import { getBackend, useDemoBackend } from '@/services/backend'
+import { formatDay, formatTime } from '@/lib/date'
+import { getBackend } from '@/services/backend'
 import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
 import { ExtrasPanel } from './ExtrasPanel'
-import { TeamsPanel } from './TeamsPanel'
-import { Alert, Field } from '@/components/ui'
+import { Alert, EmptyState, Field } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
-type Section = 'participantes' | 'resultados' | 'apuestas' | 'equipos' | 'calendario' | 'torneo'
+type Section = 'participantes' | 'resultados' | 'apuestas' | 'cruces' | 'torneo'
 
 const SECTIONS: { value: Section; label: string }[] = [
   { value: 'participantes', label: 'Participantes' },
   { value: 'resultados', label: 'Resultados' },
   { value: 'apuestas', label: 'Apuestas' },
-  { value: 'equipos', label: 'Equipos' },
-  { value: 'calendario', label: 'Calendario' },
+  { value: 'cruces', label: 'Cruces' },
   { value: 'torneo', label: 'Torneo' },
 ]
 
@@ -38,6 +27,11 @@ const SECTIONS: { value: Section; label: string }[] = [
  *
  * No es una pantalla aparte porque el administrador no participa en la porra:
  * su perfil no tiene posición ni gráficas, así que este es su contenido.
+ *
+ * Equipos y calendario no se tocan desde aquí: se sembraron una vez y, si la
+ * UEFA cambiase algo, se corrige directamente en la base de datos. Un botón
+ * capaz de regenerar los 144 partidos a media competición era más peligro que
+ * comodidad.
  */
 export default function AdminPanels() {
   const [section, setSection] = useState<Section>('participantes')
@@ -78,10 +72,8 @@ export default function AdminPanels() {
           <ResultsPanel />
         ) : section === 'apuestas' ? (
           <ExtrasPanel />
-        ) : section === 'equipos' ? (
-          <TeamsPanel />
-        ) : section === 'calendario' ? (
-          <CalendarPanel />
+        ) : section === 'cruces' ? (
+          <KnockoutPanel />
         ) : (
           <TournamentPanel />
         )}
@@ -255,6 +247,20 @@ function ResultsPanel() {
     <div className="space-y-4">
       <MatchdayPicker value={matchday} onChange={setMatchday} currentMatchday={currentMatchday} />
 
+      {/*
+        El botón vive arriba y no flotando sobre el pie: abajo se solapaba con
+        el de cerrar sesión, que es lo último de la página del perfil.
+      */}
+      {pending.length > 0 ? (
+        <button type="button" onClick={save} disabled={saving} className="btn-primary w-full">
+          {saving ? (
+            <Spinner label="Guardando" />
+          ) : (
+            `Guardar ${pending.length} ${pending.length === 1 ? 'resultado' : 'resultados'}`
+          )}
+        </button>
+      ) : null}
+
       {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
       <Alert tone="info">
@@ -265,41 +271,38 @@ function ResultsPanel() {
         {matches.map((match) => {
           const value = valueFor(match)
           return (
-            <li key={match.id} className="card flex items-center gap-3 p-3">
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="truncate text-[13px] text-ink-soft">
-                  {teamById.get(match.homeTeamId)?.name ?? match.homeTeamId}
-                </p>
-                <p className="truncate text-[13px] text-ink-soft">
-                  {teamById.get(match.awayTeamId)?.name ?? match.awayTeamId}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col gap-1.5">
-                <GoalInput
-                  value={value.home}
-                  label={`Goles de ${teamById.get(match.homeTeamId)?.name ?? 'local'}`}
-                  onChange={(home) => setDrafts((current) => ({ ...current, [match.id]: { ...value, home } }))}
-                />
-                <GoalInput
-                  value={value.away}
-                  label={`Goles de ${teamById.get(match.awayTeamId)?.name ?? 'visitante'}`}
-                  onChange={(away) => setDrafts((current) => ({ ...current, [match.id]: { ...value, away } }))}
-                />
+            <li key={match.id} className="card space-y-2 p-3">
+              {/* Cuándo se juega: sin esto los 18 partidos son indistinguibles. */}
+              <p className="font-mono text-[11px] tracking-wide text-ink-mute">
+                {formatDay(match.kickoff)} · {formatTime(match.kickoff)}
+              </p>
+
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="truncate text-[13px] text-ink-soft">
+                    {teamById.get(match.homeTeamId)?.name ?? match.homeTeamId}
+                  </p>
+                  <p className="truncate text-[13px] text-ink-soft">
+                    {teamById.get(match.awayTeamId)?.name ?? match.awayTeamId}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col gap-1.5">
+                  <GoalInput
+                    value={value.home}
+                    label={`Goles de ${teamById.get(match.homeTeamId)?.name ?? 'local'}`}
+                    onChange={(home) => setDrafts((current) => ({ ...current, [match.id]: { ...value, home } }))}
+                  />
+                  <GoalInput
+                    value={value.away}
+                    label={`Goles de ${teamById.get(match.awayTeamId)?.name ?? 'visitante'}`}
+                    onChange={(away) => setDrafts((current) => ({ ...current, [match.id]: { ...value, away } }))}
+                  />
+                </div>
               </div>
             </li>
           )
         })}
       </ul>
-
-      {pending.length > 0 ? (
-        <div className="safe-bottom fixed inset-x-0 bottom-[4.75rem] z-30 px-4">
-          <div className="mx-auto max-w-lg">
-            <button type="button" onClick={save} disabled={saving} className="btn-primary w-full shadow-lift">
-              {saving ? <Spinner label="Guardando" /> : `Guardar ${pending.length} resultados`}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -329,129 +332,19 @@ function GoalInput({
   )
 }
 
-/* ────────────────────────────── Calendario y equipos ────────────────────────────── */
+/* ────────────────────────────── Cruces ────────────────────────────── */
 
-function CalendarPanel() {
-  const { teams, matches, matchesByMatchday, teamById, currentMatchday, refresh } = useData()
-  const [matchday, setMatchday] = useState(currentMatchday)
-  const [busy, setBusy] = useState(false)
-  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-
-  async function run(work: () => Promise<void>, done: string) {
-    setBusy(true)
-    setFeedback(null)
-    try {
-      await work()
-      await refresh()
-      setFeedback({ tone: 'success', text: done })
-    } catch (cause) {
-      setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se ha podido completar' })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function seedEverything() {
-    if (
-      matches.length > 0 &&
-      !window.confirm('Se van a regenerar los 36 equipos y los 144 partidos. Los resultados ya guardados se perderán. ¿Sigo?')
-    ) {
-      return
-    }
-    const backend = await getBackend()
-    await backend.replaceTeams(DEFAULT_TEAMS)
-    await backend.replaceMatches(buildOfficialMatches())
-    await recomputeScores()
-  }
-
-  async function updateKickoff(match: Match, wallClock: string) {
-    if (!wallClock) return
-    const backend = await getBackend()
-    await backend.updateMatch(match.id, { kickoff: madridToUtc(wallClock) })
-  }
-
+/**
+ * Gestión de la fase eliminatoria. Todavía vacía: el cuadro no existe hasta
+ * que la fase liga termine y se sepa quién se cruza con quién.
+ */
+function KnockoutPanel() {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2.5">
-        <SummaryTile label="Equipos" value={teams.length} />
-        <SummaryTile label="Partidos" value={matches.length} />
-      </div>
-
-      {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
-
-      <div className="card space-y-3 p-4">
-        <div>
-          <h2 className="text-sm font-semibold text-ink">Sembrar la competición</h2>
-          <p className="mt-1 text-xs leading-relaxed text-ink-mute">
-            Carga los 36 equipos del sorteo y los 144 partidos oficiales con sus horarios. Si la UEFA mueve alguno,
-            puedes corregirlo aquí abajo sin tocar el resto.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => run(seedEverything, 'Competición sembrada')}
-          className="btn-primary w-full text-xs"
-        >
-          <Wand size={15} aria-hidden="true" />
-          Equipos y calendario oficiales
-        </button>
-      </div>
-
-      {useDemoBackend ? (
-        <div className="card space-y-3 p-4">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">Datos de demostración</h2>
-            <p className="mt-1 text-xs leading-relaxed text-ink-mute">
-              Estás en modo demo, sobre el almacenamiento del navegador. Puedes volver al punto de partida cuando
-              quieras: participantes de prueba, calendario y resultados hasta la fecha de hoy.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const { resetDemoData } = await import('@/services/demoBackend')
-                await resetDemoData()
-                await recomputeScores()
-              }, 'Datos de demostración reiniciados')
-            }
-            className="btn-ghost w-full text-xs"
-          >
-            <RotateCcw size={15} aria-hidden="true" />
-            Reiniciar datos de demostración
-          </button>
-        </div>
-      ) : null}
-
-      <div>
-        <h2 className="px-1 pb-2.5 text-xs font-semibold tracking-wide text-ink-mute uppercase">Horarios</h2>
-        <MatchdayPicker value={matchday} onChange={setMatchday} currentMatchday={currentMatchday} />
-        <ul className="mt-3 space-y-2">
-          {matchesByMatchday(matchday).map((match) => (
-            <li key={match.id} className="card space-y-2 p-3">
-              <p className="truncate text-[13px] text-ink-soft">
-                {teamById.get(match.homeTeamId)?.name ?? match.homeTeamId}
-                <span className="mx-1.5 text-ink-mute">–</span>
-                {teamById.get(match.awayTeamId)?.name ?? match.awayTeamId}
-              </p>
-              <input
-                type="datetime-local"
-                defaultValue={toDateTimeInputValue(match.kickoff)}
-                aria-label="Hora del partido"
-                disabled={busy}
-                onBlur={(event) => {
-                  if (event.target.value === toDateTimeInputValue(match.kickoff)) return
-                  void run(() => updateKickoff(match, event.target.value), 'Horario actualizado')
-                }}
-                className="field py-2 text-sm"
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    <EmptyState
+      icon={<Workflow size={26} aria-hidden="true" />}
+      title="Aún no hay cruces"
+      description="El cuadro se montará aquí cuando termine la fase liga, el 27 de enero de 2027. Los play-offs se juegan a partir del 16 de febrero."
+    />
   )
 }
 

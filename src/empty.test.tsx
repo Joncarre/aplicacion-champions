@@ -113,9 +113,9 @@ describe('con la base de datos vacía', () => {
     await user.click(screen.getByRole('tab', { name: 'Champions' }))
     expect(await screen.findByText(/sin equipos cargados/i)).toBeTruthy()
 
-    // Y las jornadas mandan al panel de administración a sembrar el calendario.
+    // Y las jornadas explican al administrador por qué están vacías.
     await user.click(screen.getByRole('link', { name: 'Jornadas' }))
     expect(await screen.findByText(/todavía no hay partidos/i)).toBeTruthy()
-    expect(screen.getByRole('link', { name: /panel de administración/i })).toHaveAttribute('href', '/admin')
+    expect(screen.getByText(/se carga directamente en la base de datos/i)).toBeVisible()
   })
 })

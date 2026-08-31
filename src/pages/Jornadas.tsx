@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { CalendarOff, Check } from 'lucide-react'
 import type { Match, Prediction } from '@/types'
 import { useAuth } from '@/context/AuthContext'
@@ -149,17 +148,11 @@ export default function Jornadas() {
             icon={<CalendarOff size={28} aria-hidden="true" />}
             title="Todavía no hay partidos"
             description={
-              user?.isAdmin ? (
-                <>
-                  Genera el calendario desde el{' '}
-                  <Link to="/admin" className="font-semibold text-brand-soft hover:underline">
-                    panel de administración
-                  </Link>
-                  .
-                </>
-              ) : (
-                'El administrador aún no ha cargado el calendario de esta jornada.'
-              )
+              // La siembra ya no se hace desde la app: si esto sale vacío,
+              // es que falta cargar el calendario en la base de datos.
+              user?.isAdmin
+                ? 'El calendario se carga directamente en la base de datos.'
+                : 'El administrador aún no ha cargado el calendario de esta jornada.'
             }
           />
         ) : (

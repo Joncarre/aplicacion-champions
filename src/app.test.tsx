@@ -293,6 +293,11 @@ describe('la aplicación', () => {
     expect(screen.queryByText(/apuestas especiales/i)).toBeNull()
     expect(screen.queryByRole('img', { name: /puntos acumulados/i })).toBeNull()
     expect(screen.queryByText(factOfTheDay(now()))).toBeNull()
+
+    // Equipos y calendario se sembraron una vez y ya no se tocan desde la app.
+    expect(screen.getByRole('button', { name: 'Cruces' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Equipos' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Calendario' })).toBeNull()
   })
 
   it('deja al administrador marcar pagos desde su perfil', async () => {
@@ -317,13 +322,16 @@ describe('la aplicación', () => {
     const goles = await screen.findAllByRole('textbox')
     expect(goles).toHaveLength(MATCHES_PER_MATCHDAY * 2)
 
+    // Y cada partido dice cuándo se juega, que si no son 18 filas iguales.
+    expect(screen.getAllByText(/·\s\d{2}:\d{2}$/)).toHaveLength(MATCHES_PER_MATCHDAY)
+
     await user.clear(goles[0]!)
     await user.type(goles[0]!, '3')
     await user.clear(goles[1]!)
     await user.type(goles[1]!, '1')
 
     // Al haber cambios aparece el botón de guardar, que recalcula la porra.
-    await user.click(await screen.findByRole('button', { name: /guardar 1 resultados/i }))
+    await user.click(await screen.findByRole('button', { name: /guardar 1 resultado/i }))
     expect(await screen.findByText(/recalculados/i)).toBeTruthy()
   })
 
@@ -333,9 +341,9 @@ describe('la aplicación', () => {
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
     await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
 
-    // Una fila por participante. Aquí sí sale el admin: es la lista de usuarios.
+    // Una fila por participante, y el administrador fuera: no apuesta.
     const main = screen.getByRole('main')
     const filas = await within(main).findAllByRole('listitem')
-    expect(filas).toHaveLength(DEMO_PARTICIPANTS.length + 1)
+    expect(filas).toHaveLength(DEMO_PARTICIPANTS.length)
   })
 })
