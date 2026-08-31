@@ -296,10 +296,10 @@ describe('la aplicación', () => {
     expect(screen.queryByText(factOfTheDay(now()))).toBeNull()
 
     // Solo las cuatro pestañas que se usan: ni sembrar ni ajustes sueltos.
-    expect(screen.getByRole('button', { name: 'Cruces' })).toBeVisible()
-    expect(screen.queryByRole('button', { name: 'Equipos' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Calendario' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Torneo' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Cruces' })).toBeVisible()
+    expect(screen.queryByRole('tab', { name: 'Equipos' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Calendario' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Torneo' })).toBeNull()
   })
 
   it('deja al administrador ver las jornadas, pero no apostar', async () => {
@@ -334,14 +334,14 @@ describe('la aplicación', () => {
     const user = await loginAs('joncarre')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
-    await user.click(await screen.findByRole('button', { name: 'Resultados' }))
+    await user.click(await screen.findByRole('tab', { name: 'Resultados' }))
 
     // Un campo de goles por equipo en los 18 partidos de la jornada.
     const goles = await screen.findAllByRole('textbox')
     expect(goles).toHaveLength(MATCHES_PER_MATCHDAY * 2)
 
-    // Y cada partido dice cuándo se juega, que si no son 18 filas iguales.
-    expect(screen.getAllByText(/·\s\d{2}:\d{2}$/)).toHaveLength(MATCHES_PER_MATCHDAY)
+    // Y cada partido dice a qué hora se juega, bajo la fecha de su día.
+    expect(screen.getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(MATCHES_PER_MATCHDAY)
 
     await user.clear(goles[0]!)
     await user.type(goles[0]!, '3')
@@ -357,7 +357,7 @@ describe('la aplicación', () => {
     const user = await loginAs('joncarre')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
-    await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
+    await user.click(await screen.findByRole('tab', { name: 'Apuestas' }))
 
     // Una fila por participante, y el administrador fuera: no apuesta.
     const main = screen.getByRole('main')
@@ -369,7 +369,7 @@ describe('la aplicación', () => {
     const user = await loginAs('joncarre')
 
     await user.click(await screen.findByRole('link', { name: 'Perfil' }))
-    await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
+    await user.click(await screen.findByRole('tab', { name: 'Apuestas' }))
 
     // Sin tocar nada no hay nada que guardar.
     const guardar = await screen.findByRole('button', { name: 'Guardar' })

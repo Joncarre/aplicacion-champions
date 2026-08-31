@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Check, ShieldCheck, Wallet, Workflow } from 'lucide-react'
-import type { Match, PublicUser } from '@/types'
+import type { Match, PublicUser, Team } from '@/types'
 import { useData } from '@/context/DataContext'
-import { formatDay, formatTime } from '@/lib/date'
+import { formatLongDay, formatTime, madridDayKey } from '@/lib/date'
 import { getBackend } from '@/services/backend'
 import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
 import { ExtrasPanel } from './ExtrasPanel'
-import { Alert } from '@/components/ui'
+import { Alert, Segmented } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
 type Section = 'usuarios' | 'resultados' | 'apuestas' | 'cruces'
@@ -46,21 +46,16 @@ export default function AdminPanels() {
       </h2>
       <span aria-hidden="true" className="rule-taper mt-2.5 block" />
 
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {SECTIONS.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            onClick={() => setSection(item.value)}
-            aria-current={section === item.value}
-            className={[
-              'min-h-9 shrink-0 rounded-full px-3.5 font-mono text-xs font-semibold transition-colors',
-              section === item.value ? 'bg-brand/22 text-brand-light' : 'bg-surface text-ink-mute hover:text-ink-soft',
-            ].join(' ')}
-          >
-            {item.label}
-          </button>
-        ))}
+      {/* Un solo bloque con la pastilla que se desplaza, igual que el selector
+          de la clasificación: cuatro botones sueltos no se leían como un grupo. */}
+      <div className="mt-4">
+        <Segmented
+          options={SECTIONS}
+          value={section}
+          onChange={setSection}
+          ariaLabel="Secciones de administración"
+          dense
+        />
       </div>
 
       <div className="mt-5">
@@ -198,6 +193,19 @@ function ResultsPanel() {
 
   const matches = useMemo(() => matchesByMatchday(matchday), [matchesByMatchday, matchday])
 
+  // Los partidos se agrupan por día, como en la pantalla de jornadas: así la
+  // fecha se escribe una vez y no delante de cada uno de los dieciocho.
+  const byDay = useMemo(() => {
+    const groups = new Map<string, Match[]>()
+    for (const match of matches) {
+      const key = madridDayKey(match.kickoff)
+      const bucket = groups.get(key)
+      if (bucket) bucket.push(match)
+      else groups.set(key, [match])
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [matches])
+
   const valueFor = (match: Match) =>
     drafts[match.id] ?? {
       home: match.homeGoals === null ? '' : String(match.homeGoals),
@@ -267,42 +275,79 @@ function ResultsPanel() {
         Deja los dos marcadores vacíos para volver a marcar un partido como no jugado.
       </Alert>
 
-      <ul className="space-y-2">
-        {matches.map((match) => {
-          const value = valueFor(match)
-          return (
-            <li key={match.id} className="card space-y-2 p-3">
-              {/* Cuándo se juega: sin esto los 18 partidos son indistinguibles. */}
-              <p className="font-mono text-[11px] tracking-wide text-ink-mute">
-                {formatDay(match.kickoff)} · {formatTime(match.kickoff)}
-              </p>
+      <div className="space-y-5">
+        {byDay.map(([day, dayMatches]) => (
+          <section key={day}>
+            <h3 className="font-mono text-[11px] font-semibold tracking-[0.16em] text-aqua uppercase">
+              {formatLongDay(dayMatches[0]?.kickoff ?? 0)}
+            </h3>
+            <span aria-hidden="true" className="mt-2 block h-px bg-line-soft" />
 
-              <div className="flex items-center gap-3">
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="truncate text-[13px] text-ink-soft">
-                    {teamById.get(match.homeTeamId)?.name ?? match.homeTeamId}
-                  </p>
-                  <p className="truncate text-[13px] text-ink-soft">
-                    {teamById.get(match.awayTeamId)?.name ?? match.awayTeamId}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col gap-1.5">
-                  <GoalInput
-                    value={value.home}
-                    label={`Goles de ${teamById.get(match.homeTeamId)?.name ?? 'local'}`}
-                    onChange={(home) => setDrafts((current) => ({ ...current, [match.id]: { ...value, home } }))}
-                  />
-                  <GoalInput
-                    value={value.away}
-                    label={`Goles de ${teamById.get(match.awayTeamId)?.name ?? 'visitante'}`}
-                    onChange={(away) => setDrafts((current) => ({ ...current, [match.id]: { ...value, away } }))}
-                  />
-                </div>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+            <div className="divide-y divide-line-soft">
+              {dayMatches.map((match) => {
+                const value = valueFor(match)
+                return (
+                  <div key={match.id} className="flex items-center gap-3 py-2">
+                    <span className="w-10 shrink-0 font-mono text-[11px] tabular-nums text-ink-mute">
+                      {formatTime(match.kickoff)}
+                    </span>
+
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <TeamLine
+                        team={teamById.get(match.homeTeamId)}
+                        fallback={match.homeTeamId}
+                        value={value.home}
+                        onChange={(home) => setDrafts((current) => ({ ...current, [match.id]: { ...value, home } }))}
+                      />
+                      <TeamLine
+                        team={teamById.get(match.awayTeamId)}
+                        fallback={match.awayTeamId}
+                        value={value.away}
+                        onChange={(away) => setDrafts((current) => ({ ...current, [match.id]: { ...value, away } }))}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Una línea por equipo, con su casilla al lado.
+ *
+ * Poner el marcador en la misma línea que el nombre quita toda duda sobre a
+ * quién le estás metiendo los goles: con las dos casillas apiladas a la
+ * derecha había que contar cuál era cuál. La pincelada es el color del club,
+ * que hasta ahora no se usaba en ninguna pantalla y aquí gana la lista de un
+ * vistazo por tres píxeles de ancho.
+ */
+function TeamLine({
+  team,
+  fallback,
+  value,
+  onChange,
+}: {
+  team: Team | undefined
+  fallback: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const name = team?.name ?? fallback
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <span
+        aria-hidden="true"
+        className="h-4 w-[3px] shrink-0 rounded-full"
+        style={{ background: team?.color ?? 'var(--color-line)' }}
+      />
+      <span className="min-w-0 flex-1 truncate text-[13px] text-ink-soft">{name}</span>
+      <GoalInput value={value} label={`Goles de ${name}`} onChange={onChange} />
     </div>
   )
 }
@@ -326,7 +371,7 @@ function GoalInput({
       placeholder="–"
       onFocus={(event) => event.target.select()}
       onChange={(event) => onChange(event.target.value.replace(/\D/g, '').slice(0, 2))}
-      className="size-10 rounded-lg border border-line bg-raised text-center font-mono text-base tabular-nums text-ink
+      className="h-8 w-9 shrink-0 rounded-md border border-line bg-raised text-center font-mono text-sm tabular-nums text-ink
                  placeholder:text-ink-mute focus:border-brand focus:outline-none"
     />
   )

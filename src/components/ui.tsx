@@ -120,6 +120,8 @@ interface SegmentedProps<T extends string> {
   value: T
   onChange: (value: T) => void
   ariaLabel: string
+  /** Versión compacta, para cuando son cuatro opciones y no caben holgadas. */
+  dense?: boolean
 }
 
 /**
@@ -129,7 +131,7 @@ interface SegmentedProps<T extends string> {
  * que se desplaza: el movimiento cuenta de dónde vienes y adónde vas, y la
  * transición hace que el cambio no sea un parpadeo.
  */
-export function Segmented<T extends string>({ options, value, onChange, ariaLabel }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, ariaLabel, dense = false }: SegmentedProps<T>) {
   const index = Math.max(
     0,
     options.findIndex((option) => option.value === value),
@@ -160,7 +162,8 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
             aria-selected={selected}
             onClick={() => onChange(option.value)}
             className={[
-              'min-h-10 flex-1 rounded-full px-3 font-display text-sm font-semibold transition-colors duration-200',
+              'flex-1 rounded-full font-display font-semibold transition-colors duration-200',
+              dense ? 'min-h-9 min-w-0 truncate px-2 text-[12px]' : 'min-h-10 px-3 text-sm',
               selected ? 'text-brand-light' : 'text-ink-mute hover:text-ink-soft',
             ].join(' ')}
           >
