@@ -1,25 +1,23 @@
 import { useMemo, useState } from 'react'
-import { Check, RefreshCw, ShieldCheck, Wallet, Workflow } from 'lucide-react'
-import type { Match, PublicUser, TournamentConfig } from '@/types'
+import { Check, ShieldCheck, Wallet, Workflow } from 'lucide-react'
+import type { Match, PublicUser } from '@/types'
 import { useData } from '@/context/DataContext'
-import { MATCHDAY_WINDOWS } from '@/data/calendar'
 import { formatDay, formatTime } from '@/lib/date'
 import { getBackend } from '@/services/backend'
 import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
 import { ExtrasPanel } from './ExtrasPanel'
-import { Alert, EmptyState, Field } from '@/components/ui'
+import { Alert, EmptyState } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
-type Section = 'participantes' | 'resultados' | 'apuestas' | 'cruces' | 'torneo'
+type Section = 'participantes' | 'resultados' | 'apuestas' | 'cruces'
 
 const SECTIONS: { value: Section; label: string }[] = [
   { value: 'participantes', label: 'Participantes' },
   { value: 'resultados', label: 'Resultados' },
   { value: 'apuestas', label: 'Apuestas' },
   { value: 'cruces', label: 'Cruces' },
-  { value: 'torneo', label: 'Torneo' },
 ]
 
 /**
@@ -32,6 +30,10 @@ const SECTIONS: { value: Section; label: string }[] = [
  * UEFA cambiase algo, se corrige directamente en la base de datos. Un botón
  * capaz de regenerar los 144 partidos a media competición era más peligro que
  * comodidad.
+ *
+ * Lo mismo con los ajustes del torneo: las respuestas oficiales del goleador y
+ * del campeón viven en la pestaña de Apuestas, al lado de las apuestas que
+ * resuelven, y no en un panel de opciones aparte.
  */
 export default function AdminPanels() {
   const [section, setSection] = useState<Section>('participantes')
@@ -72,10 +74,8 @@ export default function AdminPanels() {
           <ResultsPanel />
         ) : section === 'apuestas' ? (
           <ExtrasPanel />
-        ) : section === 'cruces' ? (
-          <KnockoutPanel />
         ) : (
-          <TournamentPanel />
+          <KnockoutPanel />
         )}
       </div>
     </section>
@@ -345,141 +345,6 @@ function KnockoutPanel() {
       title="Aún no hay cruces"
       description="El cuadro se montará aquí cuando termine la fase liga, el 27 de enero de 2027. Los play-offs se juegan a partir del 16 de febrero."
     />
-  )
-}
-
-/* ────────────────────────────── Ajustes del torneo ────────────────────────────── */
-
-function TournamentPanel() {
-  const { config, teams, refresh } = useData()
-  const [draft, setDraft] = useState<TournamentConfig>(config)
-  const [busy, setBusy] = useState(false)
-  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-
-  const sortedTeams = useMemo(() => [...teams].sort((a, b) => a.name.localeCompare(b.name, 'es')), [teams])
-
-  async function save() {
-    setBusy(true)
-    setFeedback(null)
-    try {
-      const backend = await getBackend()
-      await backend.saveConfig(draft)
-      await recomputeScores()
-      await refresh()
-      setFeedback({ tone: 'success', text: 'Ajustes guardados y puntos recalculados' })
-    } catch (cause) {
-      setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se han podido guardar' })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function recalculate() {
-    setBusy(true)
-    setFeedback(null)
-    try {
-      await recomputeScores()
-      await refresh()
-      setFeedback({ tone: 'success', text: 'Puntuaciones recalculadas' })
-    } catch (cause) {
-      setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se ha podido recalcular' })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
-
-      <div className="card space-y-4 p-4">
-        <h2 className="text-sm font-semibold text-ink">Aciertos de las apuestas especiales</h2>
-
-        <Field
-          label="Máximo goleador real"
-          htmlFor="actual-top-scorer"
-          hint="Se compara sin distinguir tildes ni mayúsculas, y acepta el apellido suelto."
-        >
-          <input
-            id="actual-top-scorer"
-            className="field"
-            value={draft.actualTopScorer ?? ''}
-            placeholder="Todavía sin decidir"
-            onChange={(event) => setDraft((c) => ({ ...c, actualTopScorer: event.target.value || null }))}
-          />
-        </Field>
-
-        <Field
-          label="Campeón real"
-          htmlFor="actual-champion"
-          hint="Escríbelo o elige de la lista. Se compara igual de flexible que el goleador."
-        >
-          <input
-            id="actual-champion"
-            className="field"
-            list="equipos-champions"
-            value={draft.actualChampion ?? ''}
-            placeholder="Todavía sin decidir"
-            onChange={(event) => setDraft((c) => ({ ...c, actualChampion: event.target.value || null }))}
-          />
-          <datalist id="equipos-champions">
-            {sortedTeams.map((team) => (
-              <option key={team.id} value={team.name} />
-            ))}
-          </datalist>
-        </Field>
-      </div>
-
-      <div className="card space-y-4 p-4">
-        <h2 className="text-sm font-semibold text-ink">Ajustes generales</h2>
-
-        <Field
-          label="Jornada abierta a apuestas"
-          htmlFor="current-matchday"
-          hint="Normalmente se deduce sola del calendario. Fíjala solo si necesitas forzarla."
-        >
-          <select
-            id="current-matchday"
-            className="field"
-            value={draft.currentMatchdayOverride ?? ''}
-            onChange={(event) =>
-              setDraft((c) => ({
-                ...c,
-                currentMatchdayOverride: event.target.value ? Number(event.target.value) : null,
-              }))
-            }
-          >
-            <option value="">Automática</option>
-            {MATCHDAY_WINDOWS.map((window) => (
-              <option key={window.matchday} value={window.matchday}>
-                Jornada {window.matchday} · {window.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Cuota por participante (€)" htmlFor="entry-fee">
-          <input
-            id="entry-fee"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            className="field"
-            value={draft.entryFee}
-            onChange={(event) => setDraft((c) => ({ ...c, entryFee: Number(event.target.value) || 0 }))}
-          />
-        </Field>
-      </div>
-
-      <div className="flex gap-2">
-        <button type="button" onClick={save} disabled={busy} className="btn-primary flex-1">
-          {busy ? <Spinner label="Guardando" /> : 'Guardar ajustes'}
-        </button>
-        <button type="button" onClick={recalculate} disabled={busy} className="btn-ghost px-4" aria-label="Recalcular puntuaciones">
-          <RefreshCw size={17} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
   )
 }
 

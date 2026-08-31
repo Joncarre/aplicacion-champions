@@ -4,6 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+import { getBackend } from './services/backend'
 import { DEMO_PARTICIPANTS, DEMO_UNPAID, resetDemoData } from './services/demoBackend'
 import { clearSession } from './services/session'
 import { factOfTheDay } from './data/facts'
@@ -294,10 +295,11 @@ describe('la aplicación', () => {
     expect(screen.queryByRole('img', { name: /puntos acumulados/i })).toBeNull()
     expect(screen.queryByText(factOfTheDay(now()))).toBeNull()
 
-    // Equipos y calendario se sembraron una vez y ya no se tocan desde la app.
+    // Solo las cuatro pestañas que se usan: ni sembrar ni ajustes sueltos.
     expect(screen.getByRole('button', { name: 'Cruces' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Equipos' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Calendario' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Torneo' })).toBeNull()
   })
 
   it('deja al administrador ver las jornadas, pero no apostar', async () => {
@@ -361,5 +363,24 @@ describe('la aplicación', () => {
     const main = screen.getByRole('main')
     const filas = await within(main).findAllByRole('listitem')
     expect(filas).toHaveLength(DEMO_PARTICIPANTS.length)
+  })
+
+  it('fija los aciertos oficiales en la misma pestaña de apuestas', async () => {
+    const user = await loginAs('joncarre')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+    await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
+
+    // Sin tocar nada no hay nada que guardar.
+    const guardar = await screen.findByRole('button', { name: 'Guardar aciertos' })
+    expect(guardar).toBeDisabled()
+
+    await user.type(screen.getByLabelText('Máximo goleador'), 'Kylian Mbappé')
+    await user.click(guardar)
+
+    expect(await screen.findByText(/recalculados/i)).toBeVisible()
+
+    const backend = await getBackend()
+    expect((await backend.getConfig()).actualTopScorer).toBe('Kylian Mbappé')
   })
 })
