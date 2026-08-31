@@ -19,6 +19,8 @@ interface MatchCardProps {
   hasPaid: boolean
   currentMatchday: number
   now: number
+  /** El administrador mira la jornada, pero no apuesta en ella. */
+  isAdmin?: boolean
 }
 
 const OUTCOME_STYLES = {
@@ -37,8 +39,9 @@ export function MatchCard({
   hasPaid,
   currentMatchday,
   now,
+  isAdmin = false,
 }: MatchCardProps) {
-  const lock = lockReasonFor(match, { hasPaid, currentMatchday, now })
+  const lock = lockReasonFor(match, { hasPaid, currentMatchday, now, isAdmin })
   const editable = lock === null
   const finished = isResolved(match)
 
@@ -70,31 +73,34 @@ export function MatchCard({
         <TeamRow team={awayTeam} fallback={match.awayTeamId} goals={match.awayGoals} winner={isWinner(match, 'away')} />
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] tracking-wide text-brand-soft uppercase">Tu apuesta</span>
+      {/* Al administrador no se le pinta el hueco de la apuesta: no la tiene. */}
+      {isAdmin ? null : (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="font-mono text-[11px] tracking-wide text-brand-soft uppercase">Tu apuesta</span>
 
-        <div className="flex items-center gap-2.5">
-          {/* Un fallo no suma nada, así que tampoco hace falta anunciarlo. */}
-          {scored && points ? (
-            <span
-              title={OUTCOME_STYLES[scored].label}
-              className={`font-mono text-[11px] font-semibold ${OUTCOME_STYLES[scored].text}`}
-            >
-              +{points} pts
-            </span>
-          ) : null}
+          <div className="flex items-center gap-2.5">
+            {/* Un fallo no suma nada, así que tampoco hace falta anunciarlo. */}
+            {scored && points ? (
+              <span
+                title={OUTCOME_STYLES[scored].label}
+                className={`font-mono text-[11px] font-semibold ${OUTCOME_STYLES[scored].text}`}
+              >
+                +{points} pts
+              </span>
+            ) : null}
 
-          <ScorePicker
-            home={value.home}
-            away={value.away}
-            editable={editable}
-            onHomeChange={update('home')}
-            onAwayChange={update('away')}
-            homeLabel={`Goles de ${homeTeam?.name ?? 'local'}`}
-            awayLabel={`Goles de ${awayTeam?.name ?? 'visitante'}`}
-          />
+            <ScorePicker
+              home={value.home}
+              away={value.away}
+              editable={editable}
+              onHomeChange={update('home')}
+              onAwayChange={update('away')}
+              homeLabel={`Goles de ${homeTeam?.name ?? 'local'}`}
+              awayLabel={`Goles de ${awayTeam?.name ?? 'visitante'}`}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </article>
   )
 }
@@ -121,6 +127,9 @@ function MatchStatus({
       </span>
     )
   }
+  // Para el administrador la jornada es una lista de partidos y ya: no hay
+  // cuenta atrás que le afecte ni candado que anunciarle.
+  if (lock === 'admin') return null
   if (lock === null) {
     return (
       <span className="font-mono text-[11px] font-medium text-brand-soft">

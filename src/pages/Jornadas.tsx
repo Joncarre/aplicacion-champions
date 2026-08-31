@@ -42,6 +42,9 @@ export default function Jornadas() {
 
   const matches = useMemo(() => matchesByMatchday(matchday), [matchesByMatchday, matchday])
   const hasPaid = user?.hasPaid ?? false
+  // El administrador entra a mirar: ve el calendario y los resultados, pero
+  // no apuesta, porque está fuera de la clasificación.
+  const isAdmin = user?.isAdmin ?? false
 
   const byDay = useMemo(() => {
     const groups = new Map<string, Match[]>()
@@ -62,7 +65,7 @@ export default function Jornadas() {
     for (const match of matches) {
       const draft = drafts[match.id]
       if (!draft || draft.home === '' || draft.away === '') continue
-      if (lockReasonFor(match, { hasPaid, currentMatchday, now }) !== null) continue
+      if (lockReasonFor(match, { hasPaid, currentMatchday, now, isAdmin }) !== null) continue
 
       const homeGoals = Number(draft.home)
       const awayGoals = Number(draft.away)
@@ -80,18 +83,18 @@ export default function Jornadas() {
       })
     }
     return result
-  }, [drafts, matches, myPredictions, user, hasPaid, currentMatchday, now])
+  }, [drafts, matches, myPredictions, user, hasPaid, isAdmin, currentMatchday, now])
 
   /** Partidos abiertos que aún no tienen apuesta guardada ni escrita. */
   const missing = useMemo(
     () =>
       matches.filter((match) => {
-        if (lockReasonFor(match, { hasPaid, currentMatchday, now }) !== null) return false
+        if (lockReasonFor(match, { hasPaid, currentMatchday, now, isAdmin }) !== null) return false
         const draft = drafts[match.id]
         if (draft && draft.home !== '' && draft.away !== '') return false
         return !myPredictions.get(match.id)
       }).length,
-    [matches, drafts, myPredictions, hasPaid, currentMatchday, now],
+    [matches, drafts, myPredictions, hasPaid, isAdmin, currentMatchday, now],
   )
 
   async function save() {
@@ -118,7 +121,7 @@ export default function Jornadas() {
   }
 
   const isOpenMatchday = matchday === currentMatchday
-  const showSaveBar = isOpenMatchday && hasPaid && !loading && matches.length > 0
+  const showSaveBar = isOpenMatchday && hasPaid && !isAdmin && !loading && matches.length > 0
 
   return (
     <>
@@ -127,7 +130,9 @@ export default function Jornadas() {
       <MatchdayPicker value={matchday} onChange={setMatchday} currentMatchday={currentMatchday} />
 
       <div className="mt-5 space-y-4">
-        {!hasPaid ? (
+        {isAdmin ? (
+          <Alert>Solo consulta: como administrador no juegas la porra</Alert>
+        ) : !hasPaid ? (
           <Alert tone="warning">Pago pendiente: no puedes apostar</Alert>
         ) : null}
 
@@ -176,6 +181,7 @@ export default function Jornadas() {
                     draft={drafts[match.id]}
                     onDraftChange={(matchId, draft) => setDrafts((current) => ({ ...current, [matchId]: draft }))}
                     hasPaid={hasPaid}
+                    isAdmin={isAdmin}
                     currentMatchday={currentMatchday}
                     now={now}
                   />

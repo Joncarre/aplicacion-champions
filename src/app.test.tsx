@@ -300,6 +300,22 @@ describe('la aplicación', () => {
     expect(screen.queryByRole('button', { name: 'Calendario' })).toBeNull()
   })
 
+  it('deja al administrador ver las jornadas, pero no apostar', async () => {
+    const user = await loginAs('joncarre')
+
+    await user.click(await screen.findByRole('link', { name: 'Jornadas' }))
+    await screen.findByRole('heading', { name: 'Jornadas' })
+
+    // Los partidos están todos y se dice por qué solo se miran.
+    expect(await screen.findByText(/solo consulta/i)).toBeVisible()
+    expect(screen.getAllByRole('article')).toHaveLength(MATCHES_PER_MATCHDAY)
+
+    // Pero no hay dónde escribir una apuesta ni nada que guardar.
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: /guardar/i })).toBeNull()
+    expect(screen.queryByText(/tu apuesta/i)).toBeNull()
+  })
+
   it('deja al administrador marcar pagos desde su perfil', async () => {
     const user = await loginAs('joncarre')
 
