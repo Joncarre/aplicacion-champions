@@ -8,7 +8,7 @@ import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
 import { ExtrasPanel } from './ExtrasPanel'
-import { Alert, EmptyState } from '@/components/ui'
+import { Alert } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
 type Section = 'participantes' | 'resultados' | 'apuestas' | 'cruces'
@@ -46,7 +46,7 @@ export default function AdminPanels() {
       </h2>
       <span aria-hidden="true" className="rule-taper mt-2.5 block" />
 
-      <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
         {SECTIONS.map((item) => (
           <button
             key={item.value}
@@ -340,11 +340,20 @@ function GoalInput({
  */
 function KnockoutPanel() {
   return (
-    <EmptyState
-      icon={<Workflow size={26} aria-hidden="true" />}
-      title="Aún no hay cruces"
-      description="El cuadro se montará aquí cuando termine la fase liga, el 27 de enero de 2027. Los play-offs se juegan a partir del 16 de febrero."
-    />
+    <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
+      <span className="grid size-14 place-items-center rounded-2xl bg-brand/12 text-brand-soft">
+        <Workflow size={26} aria-hidden="true" />
+      </span>
+
+      <div className="space-y-2">
+        <p className="font-display text-xl font-bold text-ink">Aún no hay cruces</p>
+        <p className="text-sm leading-relaxed text-balance text-ink-soft">
+          El cuadro se montará al terminar la fase liga, el{' '}
+          <strong className="text-ink">27 de enero de 2027</strong>. Los play-offs se juegan a partir del{' '}
+          <strong className="text-ink">16 de febrero</strong>.
+        </p>
+      </div>
+    </div>
   )
 }
 

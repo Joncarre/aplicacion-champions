@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
-import { Check } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Check, Goal, Trophy } from 'lucide-react'
 import { useData } from '@/context/DataContext'
 import { POINTS, namesMatch } from '@/lib/scoring'
 import { getBackend } from '@/services/backend'
 import { recomputeScores } from '@/services/scores'
-import { Alert, Field } from '@/components/ui'
+import { Alert } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
 /**
@@ -81,47 +81,47 @@ export function ExtrasPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="card space-y-4 p-4">
-        <h2 className="text-sm font-semibold text-ink">Respuestas oficiales</h2>
+      <section className="space-y-6 pb-1">
+        <header className="text-center">
+          <h2 className="font-mono text-[11px] font-semibold tracking-[0.18em] text-brand-soft uppercase">
+            Respuestas oficiales
+          </h2>
+          <p className="mt-1.5 text-xs text-ink-mute">Se comparan sin tildes ni mayúsculas, y vale el apellido suelto</p>
+        </header>
 
-        <Field
+        <OfficialAnswer
+          id="actual-top-scorer"
           label="Máximo goleador"
-          htmlFor="actual-top-scorer"
-          hint="Se compara sin distinguir tildes ni mayúsculas, y acepta el apellido suelto."
-        >
-          <input
-            id="actual-top-scorer"
-            className="field"
-            value={topScorer}
-            placeholder="Todavía sin decidir"
-            onChange={(event) => setTopScorer(event.target.value)}
-          />
-        </Field>
+          icon={<Goal size={13} aria-hidden="true" />}
+          points={POINTS.topScorer}
+          accent="brand"
+          value={topScorer}
+          onChange={setTopScorer}
+        />
 
-        <Field
+        <OfficialAnswer
+          id="actual-champion"
           label="Campeón"
-          htmlFor="actual-champion"
-          hint="Escríbelo o elige de la lista. Se compara igual de flexible que el goleador."
+          icon={<Trophy size={13} aria-hidden="true" />}
+          points={POINTS.champion}
+          accent="gold"
+          value={champion}
+          onChange={setChampion}
+          list="equipos-champions"
         >
-          <input
-            id="actual-champion"
-            className="field"
-            list="equipos-champions"
-            value={champion}
-            placeholder="Todavía sin decidir"
-            onChange={(event) => setChampion(event.target.value)}
-          />
           <datalist id="equipos-champions">
             {sortedTeams.map((team) => (
               <option key={team.id} value={team.name} />
             ))}
           </datalist>
-        </Field>
+        </OfficialAnswer>
 
-        <button type="button" onClick={save} disabled={saving || !dirty} className="btn-primary w-full text-xs">
-          {saving ? <Spinner label="Guardando" /> : 'Guardar aciertos'}
-        </button>
-      </div>
+        <div className="flex justify-center">
+          <button type="button" onClick={save} disabled={saving || !dirty} className="btn-primary btn-sm px-6">
+            {saving ? <Spinner label="Guardando" /> : 'Guardar aciertos'}
+          </button>
+        </div>
+      </section>
 
       {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
@@ -148,6 +148,80 @@ export function ExtrasPanel() {
           ))}
         </ul>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Cada respuesta oficial se escribe como el nombre grabado en un palmarés: sin
+ * caja, centrado y apoyado en un trazo que se enciende cuando hay respuesta.
+ * Es el mismo gesto que el marcador de las apuestas, ampliado a un nombre.
+ *
+ * El campeón va en dorado y el goleador en azul, que es también el orden en
+ * que reparten puntos: 50 contra 25.
+ */
+const ACCENTS = {
+  brand: { text: 'text-brand-soft', lit: 'bg-brand/70' },
+  gold: { text: 'text-gold', lit: 'bg-gold/70' },
+} as const
+
+interface OfficialAnswerProps {
+  id: string
+  label: string
+  icon: ReactNode
+  points: number
+  accent: keyof typeof ACCENTS
+  value: string
+  onChange: (value: string) => void
+  list?: string
+  children?: ReactNode
+}
+
+function OfficialAnswer({
+  id,
+  label,
+  icon,
+  points,
+  accent,
+  value,
+  onChange,
+  list,
+  children,
+}: OfficialAnswerProps) {
+  const { text, lit } = ACCENTS[accent]
+  const decided = value.trim() !== ''
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <label
+          htmlFor={id}
+          className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-ink-mute uppercase"
+        >
+          <span className={text}>{icon}</span>
+          {label}
+        </label>
+        <span className={`font-mono text-[11px] font-semibold ${text}`}>+{points}</span>
+      </div>
+
+      <input
+        id={id}
+        list={list}
+        value={value}
+        placeholder="Sin decidir"
+        autoComplete="off"
+        onChange={(event) => onChange(event.target.value)}
+        className={`mt-2.5 w-full bg-transparent pb-2 text-center font-display text-xl font-bold tracking-tight
+                    placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:tracking-normal
+                    placeholder:text-ink-mute focus:outline-none ${decided ? 'text-ink' : 'text-ink-soft'}`}
+      />
+      {/* El trazo vive fuera del campo para poder encenderlo sin mover el nombre. */}
+      <span
+        aria-hidden="true"
+        className={`block h-[2px] rounded-full transition-colors duration-300 ${decided ? lit : 'bg-line'}`}
+      />
+
+      {children}
     </div>
   )
 }
