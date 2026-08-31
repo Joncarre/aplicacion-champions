@@ -82,12 +82,9 @@ export function ExtrasPanel() {
   return (
     <div className="space-y-4">
       <section className="space-y-6 pb-1">
-        <header className="text-center">
-          <h2 className="font-mono text-[11px] font-semibold tracking-[0.18em] text-brand-soft uppercase">
-            Respuestas oficiales
-          </h2>
-          <p className="mt-1.5 text-xs text-ink-mute">Se comparan sin tildes ni mayúsculas, y vale el apellido suelto</p>
-        </header>
+        <h2 className="text-center font-mono text-[11px] font-semibold tracking-[0.18em] text-brand-soft uppercase">
+          Respuestas oficiales
+        </h2>
 
         <OfficialAnswer
           id="actual-top-scorer"

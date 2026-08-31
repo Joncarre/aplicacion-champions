@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, ShieldCheck, Wallet, Workflow } from 'lucide-react'
+import { ShieldCheck, Workflow } from 'lucide-react'
 import type { Match, PublicUser, Team } from '@/types'
 import { useData } from '@/context/DataContext'
 import { formatLongDay, formatTime, madridDayKey } from '@/lib/date'
@@ -118,65 +118,76 @@ function UsersPanel() {
 
       {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
-      <ul className="space-y-2">
+      {/* Una fila por usuario, separadas por una línea: enmarcar cada uno hacía
+          de una lista de ocho nombres ocho fichas. */}
+      <ul className="divide-y divide-line-soft">
         {users.map((participant) => {
           const working = busy === participant.id
           return (
-            <li key={participant.id} className="card p-3.5">
-              <div className="flex items-center gap-3">
-                <Avatar user={participant} />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate text-[15px] font-semibold text-ink">
-                    {participant.nickname}
-                    {participant.isAdmin ? (
-                      <ShieldCheck size={14} className="shrink-0 text-brand-soft" aria-label="administrador" />
-                    ) : null}
-                  </p>
-                  <p className="truncate text-xs text-ink-mute">
-                    {participant.nombre} {participant.apellidos}
-                  </p>
-                </div>
-                {working ? <Spinner label="Guardando" /> : null}
+            <li key={participant.id} className="flex items-center gap-3 py-2.5">
+              <Avatar user={participant} size="sm" />
+
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
+                  {participant.nickname}
+                  {participant.isAdmin ? (
+                    <ShieldCheck size={13} className="shrink-0 text-brand-soft" aria-label="administrador" />
+                  ) : null}
+                </p>
+                <p className="truncate text-xs text-ink-mute">
+                  {participant.nombre} {participant.apellidos}
+                </p>
               </div>
 
-              <div className="mt-3 flex">
-                {/* Al administrador no le toca pagar: no juega la porra. */}
-                {participant.isAdmin ? (
-                  <span className="btn min-h-10 flex-1 cursor-default px-3 font-mono text-[11px] tracking-wide text-brand-soft uppercase">
-                    No participa
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={working}
-                    onClick={() =>
-                      run(
-                        participant.id,
-                        () => togglePaid(participant),
-                        participant.hasPaid ? 'Marcado como pendiente' : 'Marcado como pagado',
-                      )
-                    }
-                    className={[
-                      'btn min-h-10 flex-1 px-3 text-xs',
-                      participant.hasPaid
-                        ? 'border border-exact/40 bg-exact/12 text-exact'
-                        : 'border border-line bg-raised text-ink-soft',
-                    ].join(' ')}
-                  >
-                    {participant.hasPaid ? (
-                      <Check size={14} aria-hidden="true" />
-                    ) : (
-                      <Wallet size={14} aria-hidden="true" />
-                    )}
-                    {participant.hasPaid ? 'Pagado' : 'Sin pagar'}
-                  </button>
-                )}
-              </div>
+              {working ? (
+                <Spinner label="Guardando" />
+              ) : participant.isAdmin ? (
+                // Al administrador no le toca pagar: no juega la porra.
+                <span className="shrink-0 font-mono text-[10px] tracking-wide text-ink-mute uppercase">
+                  No participa
+                </span>
+              ) : (
+                <PaymentToggle
+                  paid={participant.hasPaid}
+                  onClick={() =>
+                    run(
+                      participant.id,
+                      () => togglePaid(participant),
+                      participant.hasPaid ? 'Marcado como pendiente' : 'Marcado como pagado',
+                    )
+                  }
+                />
+              )}
             </li>
           )
         })}
       </ul>
     </div>
+  )
+}
+
+/**
+ * Interruptor de pago, del tamaño de una etiqueta.
+ *
+ * Ocupaba una línea entera bajo cada nombre y era el único botón de la fila,
+ * así que se lee mejor como un estado que se enciende: el punto de la
+ * izquierda es la luz, y basta tocarlo para cambiarla.
+ */
+function PaymentToggle({ paid, onClick }: { paid: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-full px-3',
+        'font-mono text-[10px] font-semibold tracking-wide uppercase',
+        'transition-colors duration-200 active:scale-[0.97]',
+        paid ? 'bg-exact/14 text-exact' : 'bg-raised text-ink-mute hover:text-ink-soft',
+      ].join(' ')}
+    >
+      <span aria-hidden="true" className={`size-1.5 rounded-full ${paid ? 'bg-exact' : 'bg-ink-mute'}`} />
+      {paid ? 'Pagado' : 'Sin pagar'}
+    </button>
   )
 }
 
@@ -322,9 +333,7 @@ function ResultsPanel() {
  *
  * Poner el marcador en la misma línea que el nombre quita toda duda sobre a
  * quién le estás metiendo los goles: con las dos casillas apiladas a la
- * derecha había que contar cuál era cuál. La pincelada es el color del club,
- * que hasta ahora no se usaba en ninguna pantalla y aquí gana la lista de un
- * vistazo por tres píxeles de ancho.
+ * derecha había que contar cuál era cuál.
  */
 function TeamLine({
   team,
@@ -341,11 +350,6 @@ function TeamLine({
 
   return (
     <div className="flex items-center gap-2.5">
-      <span
-        aria-hidden="true"
-        className="h-4 w-[3px] shrink-0 rounded-full"
-        style={{ background: team?.color ?? 'var(--color-line)' }}
-      />
       <span className="min-w-0 flex-1 truncate text-[13px] text-ink-soft">{name}</span>
       <GoalInput value={value} label={`Goles de ${name}`} onChange={onChange} />
     </div>

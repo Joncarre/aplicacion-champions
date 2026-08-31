@@ -59,7 +59,25 @@ export default function Perfil() {
 
   return (
     <>
-      <PageHeader title="Perfil" />
+      {/*
+        Cerrar sesión vive en la cabecera. Abajo del todo obligaba a recorrer
+        el perfil entero —o el panel de administración— para llegar hasta él, y
+        además chocaba con lo que cada pestaña dejara flotando en el pie.
+      */}
+      <PageHeader
+        title="Perfil"
+        action={
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="grid size-9 place-items-center rounded-full bg-surface text-miss transition-colors hover:bg-overlay"
+          >
+            <LogOut size={16} aria-hidden="true" />
+          </button>
+        }
+      />
 
       <IdentityCard user={user} onPhotoSaved={refreshUser} />
 
@@ -117,12 +135,6 @@ export default function Perfil() {
         </>
       )}
 
-      <div className="mt-8 flex justify-center">
-        <button type="button" onClick={logout} className="btn-ghost btn-sm text-miss">
-          <LogOut size={15} aria-hidden="true" />
-          Cerrar sesión
-        </button>
-      </div>
     </>
   )
 }

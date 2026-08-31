@@ -300,6 +300,9 @@ describe('la aplicación', () => {
     expect(screen.queryByRole('img', { name: /puntos acumulados/i })).toBeNull()
     expect(screen.queryByText(factOfTheDay(now()))).toBeNull()
 
+    // Cerrar sesión está arriba, sin tener que recorrer el panel entero.
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
+
     // Solo las cuatro pestañas que se usan: ni sembrar ni ajustes sueltos.
     expect(screen.getByRole('tab', { name: 'Cruces' })).toBeVisible()
     expect(screen.queryByRole('tab', { name: 'Equipos' })).toBeNull()
