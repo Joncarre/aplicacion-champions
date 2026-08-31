@@ -87,16 +87,3 @@ export async function login(nickname: string, password: string): Promise<PublicU
 
   return toPublicUser(user)
 }
-
-/** Cambio de contraseña, tanto del propio usuario como forzado por el admin. */
-export async function setPassword(userId: string, password: string): Promise<void> {
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new BackendError(`La contraseña necesita al menos ${MIN_PASSWORD_LENGTH} caracteres`)
-  }
-  const backend = await getBackend()
-  const salt = randomSalt()
-  await backend.updateUser(userId, {
-    passwordSalt: salt,
-    passwordHash: await hashPassword(password, salt),
-  })
-}

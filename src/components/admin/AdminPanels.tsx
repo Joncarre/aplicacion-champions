@@ -1,23 +1,19 @@
 import { useMemo, useState } from 'react'
 import {
   Check,
-  KeyRound,
   RefreshCw,
   ShieldCheck,
-  Trash2,
   RotateCcw,
   Wallet,
   Wand,
 } from 'lucide-react'
 import type { Match, PublicUser, TournamentConfig } from '@/types'
-import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
 import { DEFAULT_TEAMS } from '@/data/teams'
 import { buildOfficialMatches } from '@/data/fixtures'
 import { MATCHDAY_WINDOWS } from '@/data/calendar'
 import { madridToUtc, toDateTimeInputValue } from '@/lib/date'
 import { getBackend, useDemoBackend } from '@/services/backend'
-import { setPassword } from '@/services/auth'
 import { recomputeScores } from '@/services/scores'
 import { Avatar } from '@/components/Avatar'
 import { MatchdayPicker } from '@/components/MatchdayPicker'
@@ -98,7 +94,6 @@ export default function AdminPanels() {
 
 function ParticipantsPanel() {
   const { users, config, refresh } = useData()
-  const { user: me, refreshUser } = useAuth()
   const [busy, setBusy] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
@@ -113,7 +108,6 @@ function ParticipantsPanel() {
     try {
       await work()
       await refresh()
-      if (userId === me?.id) await refreshUser()
       setFeedback({ tone: 'success', text: done })
     } catch (cause) {
       setFeedback({ tone: 'error', text: cause instanceof Error ? cause.message : 'No se ha podido completar' })
@@ -125,26 +119,6 @@ function ParticipantsPanel() {
   async function togglePaid(participant: PublicUser) {
     const backend = await getBackend()
     await backend.updateUser(participant.id, { hasPaid: !participant.hasPaid })
-  }
-
-  async function toggleAdmin(participant: PublicUser) {
-    const backend = await getBackend()
-    await backend.updateUser(participant.id, { isAdmin: !participant.isAdmin })
-  }
-
-  async function resetPassword(participant: PublicUser) {
-    const next = window.prompt(`Nueva contraseña para ${participant.nickname}`)
-    if (!next) return
-    await setPassword(participant.id, next)
-  }
-
-  async function remove(participant: PublicUser) {
-    const confirmed = window.confirm(
-      `¿Seguro que quieres borrar a ${participant.nickname}? Se irán también sus apuestas y no hay vuelta atrás.`,
-    )
-    if (!confirmed) return
-    const backend = await getBackend()
-    await backend.deleteUser(participant.id)
   }
 
   return (
@@ -160,7 +134,6 @@ function ParticipantsPanel() {
       <ul className="space-y-2">
         {users.map((participant) => {
           const working = busy === participant.id
-          const isMe = participant.id === me?.id
           return (
             <li key={participant.id} className="card p-3.5">
               <div className="flex items-center gap-3">
@@ -179,7 +152,7 @@ function ParticipantsPanel() {
                 {working ? <Spinner label="Guardando" /> : null}
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex">
                 {/* Al administrador no le toca pagar: no juega la porra. */}
                 {participant.isAdmin ? (
                   <span className="btn min-h-10 flex-1 cursor-default px-3 font-mono text-[11px] tracking-wide text-brand-soft uppercase">
@@ -211,47 +184,6 @@ function ParticipantsPanel() {
                     {participant.hasPaid ? 'Pagado' : 'Sin pagar'}
                   </button>
                 )}
-
-                {/*
-                  Quitarse a uno mismo los permisos deja la porra sin
-                  administrador y sin forma de recuperarlo desde la app, así que
-                  el botón no llega a estar disponible en la propia fila.
-                */}
-                <button
-                  type="button"
-                  disabled={working || isMe}
-                  onClick={() => run(participant.id, () => toggleAdmin(participant), 'Permisos actualizados')}
-                  className="btn-ghost min-h-10 px-3 text-xs disabled:opacity-30"
-                  aria-label={
-                    isMe
-                      ? 'No puedes quitarte a ti mismo los permisos'
-                      : participant.isAdmin
-                        ? 'Quitar administrador'
-                        : 'Hacer administrador'
-                  }
-                >
-                  <ShieldCheck size={14} aria-hidden="true" />
-                </button>
-
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() => run(participant.id, () => resetPassword(participant), 'Contraseña cambiada')}
-                  className="btn-ghost min-h-10 px-3 text-xs"
-                  aria-label={`Cambiar la contraseña de ${participant.nickname}`}
-                >
-                  <KeyRound size={14} aria-hidden="true" />
-                </button>
-
-                <button
-                  type="button"
-                  disabled={working || isMe}
-                  onClick={() => run(participant.id, () => remove(participant), 'Participante eliminado')}
-                  className="btn-ghost min-h-10 px-3 text-xs text-miss disabled:opacity-30"
-                  aria-label={`Eliminar a ${participant.nickname}`}
-                >
-                  <Trash2 size={14} aria-hidden="true" />
-                </button>
               </div>
             </li>
           )
