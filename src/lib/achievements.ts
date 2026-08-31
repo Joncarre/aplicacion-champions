@@ -1,4 +1,5 @@
 import type { Match, Prediction, UserScore } from '@/types'
+import { MATCHES_PER_MATCHDAY, TOTAL_MATCHDAYS } from '@/data/calendar'
 import { isResolved, outcomeOf } from './scoring'
 
 /**
@@ -173,12 +174,23 @@ interface AchievementInput {
   matches: Match[]
 }
 
-/** Jornadas que ya tienen algún resultado oficial, en orden. */
+/**
+ * Jornadas ya terminadas, en orden.
+ *
+ * Se exige la jornada completa, no que tenga algún resultado. Los partidos de
+ * una jornada se reparten entre dos días, así que a mitad de martes hay medias
+ * jornadas resueltas: dar «mejor de la jornada» con nueve partidos contados
+ * encendía logros que luego se apagaban solos al meter los otros nueve.
+ *
+ * `resolved` cuenta partidos con resultado, así que vale igual el desglose de
+ * cualquier participante; el de uno recién registrado viene a cero y por eso
+ * se comprueba sobre todos.
+ */
 function playedMatchdays(scores: UserScore[]): number[] {
   const played = new Set<number>()
   for (const score of scores) {
     for (const bucket of score.matchdays) {
-      if (bucket.resolved > 0) played.add(bucket.matchday)
+      if (bucket.resolved >= MATCHES_PER_MATCHDAY) played.add(bucket.matchday)
     }
   }
   return [...played].sort((a, b) => a - b)
@@ -355,18 +367,24 @@ export function evaluateAchievements({
 
   const mine = scores.find((score) => score.userId === userId)
 
-  // Ni un partido sin apostar en todas las jornadas ya resueltas.
+  /*
+    Ni un partido sin apostar en toda la fase liga, que son las ocho jornadas:
+    con «las jornadas jugadas hasta ahora» se ganaba nada más terminar la
+    primera. El `resolved > 0` no sobra: quien se registra a mitad de
+    competición todavía no tiene desglose guardado y le llega uno a cero, que
+    cumpliría `predicted === resolved` sin haber apostado nunca.
+  */
   const veterano =
-    played.length > 0 &&
+    played.length === TOTAL_MATCHDAYS &&
     played.every((matchday) => {
       const bucket = bucketOf(mine, matchday)
-      return bucket !== undefined && bucket.predicted === bucket.resolved
+      return bucket !== undefined && bucket.resolved > 0 && bucket.predicted === bucket.resolved
     })
 
   // Una jornada entera apostada y sin un solo signo fallado.
   const muro = played.some((matchday) => {
     const bucket = bucketOf(mine, matchday)
-    if (!bucket || bucket.resolved === 0) return false
+    if (!bucket || bucket.resolved < MATCHES_PER_MATCHDAY) return false
     return bucket.predicted === bucket.resolved && bucket.signHits + bucket.exactHits === bucket.resolved
   })
 

@@ -66,6 +66,23 @@ describe('evaluateAchievements', () => {
     expect(states.every((state) => state.unlocked === false)).toBe(true)
   })
 
+  it('espera a que la jornada esté entera antes de repartir nada', () => {
+    /*
+      Los partidos de una jornada se juegan en dos días, así que a media
+      jornada hay resultados de sobra para que alguien vaya en cabeza. Contar
+      esa media jornada encendía logros que se apagaban solos al meter el
+      resto de resultados.
+    */
+    const aMedias = score('ana', [30])
+    aMedias.matchdays[0]!.resolved = 9
+    aMedias.matchdays[0]!.predicted = 9
+
+    const states = evaluate({ scores: [aMedias] })
+    expect(has(states, 'top-1')).toBe(false)
+    expect(has(states, 'leader-1')).toBe(false)
+    expect(has(states, 'muro')).toBe(false)
+  })
+
   /* ────────────────────────────── Mejor de la jornada ────────────────────────────── */
 
   it('reconoce al mejor de una jornada', () => {
@@ -249,12 +266,37 @@ describe('logros de constancia', () => {
     expect(has(evaluate({ predictions: apuestas, matches: sinAcabar }), 'puntual')).toBe(false)
   })
 
-  it('exige no dejarse ni un partido en ninguna jornada para ser veterano', () => {
-    expect(has(evaluate({ scores: [score('ana', [10, 10])] }), 'veterano')).toBe(true)
+  it('exige no dejarse ni un partido en toda la fase liga para ser veterano', () => {
+    const todas = [10, 10, 10, 10, 10, 10, 10, 10]
+    expect(has(evaluate({ scores: [score('ana', todas)] }), 'veterano')).toBe(true)
 
-    const conHueco = { ...score('ana', [10, 10]) }
+    const conHueco = score('ana', todas)
     conHueco.matchdays[1]!.predicted = 17
     expect(has(evaluate({ scores: [conHueco] }), 'veterano')).toBe(false)
+  })
+
+  it('no da «veterano» hasta que se han jugado las ocho jornadas', () => {
+    // Siete jornadas impecables no bastan: la fase liga no ha terminado.
+    expect(has(evaluate({ scores: [score('ana', [10, 10, 10, 10, 10, 10, 10])] }), 'veterano')).toBe(false)
+  })
+
+  it('no regala «veterano» a quien se registra a mitad de competición', () => {
+    /*
+      Bea lleva jugadas las ocho jornadas. Ana acaba de registrarse y todavía
+      no tiene puntuación guardada, así que le llega el desglose vacío: sin
+      este caso cubierto, sus cero de cero contaban como jornada impecable.
+    */
+    const bea = score('bea', [10, 10, 10, 10, 10, 10, 10, 10])
+    const recienLlegada = score('ana', [0, 0, 0, 0, 0, 0, 0, 0])
+    for (const bucket of recienLlegada.matchdays) {
+      bucket.resolved = 0
+      bucket.predicted = 0
+      bucket.signHits = 0
+    }
+
+    const states = evaluate({ scores: [recienLlegada, bea] })
+    expect(has(states, 'veterano')).toBe(false)
+    expect(has(states, 'muro')).toBe(false)
   })
 
   it('da «muro» solo con la jornada entera acertada de signo', () => {
