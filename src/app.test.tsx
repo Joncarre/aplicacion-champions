@@ -309,7 +309,7 @@ describe('la aplicación', () => {
     await screen.findByRole('heading', { name: 'Jornadas' })
 
     // Los partidos están todos y se dice por qué solo se miran.
-    expect(await screen.findByText(/solo consulta/i)).toBeVisible()
+    expect(await screen.findByText(/no puedes jugar la porra/i)).toBeVisible()
     expect(screen.getAllByRole('article')).toHaveLength(MATCHES_PER_MATCHDAY)
 
     // Pero no hay dónde escribir una apuesta ni nada que guardar.
@@ -372,7 +372,7 @@ describe('la aplicación', () => {
     await user.click(await screen.findByRole('button', { name: 'Apuestas' }))
 
     // Sin tocar nada no hay nada que guardar.
-    const guardar = await screen.findByRole('button', { name: 'Guardar aciertos' })
+    const guardar = await screen.findByRole('button', { name: 'Guardar' })
     expect(guardar).toBeDisabled()
 
     await user.type(screen.getByLabelText('Máximo goleador'), 'Kylian Mbappé')

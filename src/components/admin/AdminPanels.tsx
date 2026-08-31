@@ -11,10 +11,10 @@ import { ExtrasPanel } from './ExtrasPanel'
 import { Alert } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
-type Section = 'participantes' | 'resultados' | 'apuestas' | 'cruces'
+type Section = 'usuarios' | 'resultados' | 'apuestas' | 'cruces'
 
 const SECTIONS: { value: Section; label: string }[] = [
-  { value: 'participantes', label: 'Participantes' },
+  { value: 'usuarios', label: 'Usuarios' },
   { value: 'resultados', label: 'Resultados' },
   { value: 'apuestas', label: 'Apuestas' },
   { value: 'cruces', label: 'Cruces' },
@@ -36,7 +36,7 @@ const SECTIONS: { value: Section; label: string }[] = [
  * resuelven, y no en un panel de opciones aparte.
  */
 export default function AdminPanels() {
-  const [section, setSection] = useState<Section>('participantes')
+  const [section, setSection] = useState<Section>('usuarios')
   const { loading } = useData()
 
   return (
@@ -68,8 +68,8 @@ export default function AdminPanels() {
           <div className="flex justify-center py-16">
             <Spinner label="Cargando" />
           </div>
-        ) : section === 'participantes' ? (
-          <ParticipantsPanel />
+        ) : section === 'usuarios' ? (
+          <UsersPanel />
         ) : section === 'resultados' ? (
           <ResultsPanel />
         ) : section === 'apuestas' ? (
@@ -82,9 +82,9 @@ export default function AdminPanels() {
   )
 }
 
-/* ────────────────────────────── Participantes ────────────────────────────── */
+/* ────────────────────────────── Usuarios ────────────────────────────── */
 
-function ParticipantsPanel() {
+function UsersPanel() {
   const { users, config, refresh } = useData()
   const [busy, setBusy] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)

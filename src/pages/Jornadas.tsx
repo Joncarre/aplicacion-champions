@@ -131,7 +131,7 @@ export default function Jornadas() {
 
       <div className="mt-5 space-y-4">
         {isAdmin ? (
-          <Alert>Solo consulta: como administrador no juegas la porra</Alert>
+          <Alert>Como admin no puedes jugar la porra.</Alert>
         ) : !hasPaid ? (
           <Alert tone="warning">Pago pendiente: no puedes apostar</Alert>
         ) : null}

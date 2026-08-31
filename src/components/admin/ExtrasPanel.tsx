@@ -118,7 +118,7 @@ export function ExtrasPanel() {
 
         <div className="flex justify-center">
           <button type="button" onClick={save} disabled={saving || !dirty} className="btn-primary btn-sm px-6">
-            {saving ? <Spinner label="Guardando" /> : 'Guardar aciertos'}
+            {saving ? <Spinner label="Guardando" /> : 'Guardar'}
           </button>
         </div>
       </section>
