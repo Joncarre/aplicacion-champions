@@ -102,7 +102,9 @@ function ParticipantsPanel() {
   const [busy, setBusy] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
-  const paidCount = users.filter((u) => u.hasPaid).length
+  // El administrador no juega, así que ni cuenta como inscrito ni pone dinero.
+  const participants = users.filter((u) => !u.isAdmin)
+  const paidCount = participants.filter((u) => u.hasPaid).length
   const pot = paidCount * config.entryFee
 
   async function run(userId: string, work: () => Promise<void>, done: string) {
@@ -148,7 +150,7 @@ function ParticipantsPanel() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2.5">
-        <SummaryTile label="Inscritos" value={users.length} />
+        <SummaryTile label="Inscritos" value={participants.length} />
         <SummaryTile label="Han pagado" value={paidCount} />
         <SummaryTile label="Bote" value={`${pot} €`} tone="gold" />
       </div>
@@ -158,6 +160,7 @@ function ParticipantsPanel() {
       <ul className="space-y-2">
         {users.map((participant) => {
           const working = busy === participant.id
+          const isMe = participant.id === me?.id
           return (
             <li key={participant.id} className="card p-3.5">
               <div className="flex items-center gap-3">
@@ -177,33 +180,55 @@ function ParticipantsPanel() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() =>
-                    run(
-                      participant.id,
-                      () => togglePaid(participant),
-                      participant.hasPaid ? 'Marcado como pendiente' : 'Marcado como pagado',
-                    )
-                  }
-                  className={[
-                    'btn min-h-10 flex-1 px-3 text-xs',
-                    participant.hasPaid
-                      ? 'border border-exact/40 bg-exact/12 text-exact'
-                      : 'border border-line bg-raised text-ink-soft',
-                  ].join(' ')}
-                >
-                  {participant.hasPaid ? <Check size={14} aria-hidden="true" /> : <Wallet size={14} aria-hidden="true" />}
-                  {participant.hasPaid ? 'Pagado' : 'Sin pagar'}
-                </button>
+                {/* Al administrador no le toca pagar: no juega la porra. */}
+                {participant.isAdmin ? (
+                  <span className="btn min-h-10 flex-1 cursor-default px-3 font-mono text-[11px] tracking-wide text-brand-soft uppercase">
+                    No participa
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={working}
+                    onClick={() =>
+                      run(
+                        participant.id,
+                        () => togglePaid(participant),
+                        participant.hasPaid ? 'Marcado como pendiente' : 'Marcado como pagado',
+                      )
+                    }
+                    className={[
+                      'btn min-h-10 flex-1 px-3 text-xs',
+                      participant.hasPaid
+                        ? 'border border-exact/40 bg-exact/12 text-exact'
+                        : 'border border-line bg-raised text-ink-soft',
+                    ].join(' ')}
+                  >
+                    {participant.hasPaid ? (
+                      <Check size={14} aria-hidden="true" />
+                    ) : (
+                      <Wallet size={14} aria-hidden="true" />
+                    )}
+                    {participant.hasPaid ? 'Pagado' : 'Sin pagar'}
+                  </button>
+                )}
 
+                {/*
+                  Quitarse a uno mismo los permisos deja la porra sin
+                  administrador y sin forma de recuperarlo desde la app, así que
+                  el botón no llega a estar disponible en la propia fila.
+                */}
                 <button
                   type="button"
-                  disabled={working}
+                  disabled={working || isMe}
                   onClick={() => run(participant.id, () => toggleAdmin(participant), 'Permisos actualizados')}
-                  className="btn-ghost min-h-10 px-3 text-xs"
-                  aria-label={participant.isAdmin ? 'Quitar administrador' : 'Hacer administrador'}
+                  className="btn-ghost min-h-10 px-3 text-xs disabled:opacity-30"
+                  aria-label={
+                    isMe
+                      ? 'No puedes quitarte a ti mismo los permisos'
+                      : participant.isAdmin
+                        ? 'Quitar administrador'
+                        : 'Hacer administrador'
+                  }
                 >
                   <ShieldCheck size={14} aria-hidden="true" />
                 </button>
@@ -220,7 +245,7 @@ function ParticipantsPanel() {
 
                 <button
                   type="button"
-                  disabled={working || participant.id === me?.id}
+                  disabled={working || isMe}
                   onClick={() => run(participant.id, () => remove(participant), 'Participante eliminado')}
                   className="btn-ghost min-h-10 px-3 text-xs text-miss disabled:opacity-30"
                   aria-label={`Eliminar a ${participant.nickname}`}
