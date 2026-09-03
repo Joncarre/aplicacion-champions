@@ -100,7 +100,7 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
         <span aria-hidden="true" className="w-6 shrink-0" />
         <span aria-hidden="true" className="w-11 shrink-0" />
         <span className="min-w-0 flex-1">Nombre</span>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <span className={SIGN_COLUMN}>1X2</span>
           <span className={EXACT_COLUMN}>Exacto</span>
           <span className={TOTAL_COLUMN}>Pts</span>
@@ -143,13 +143,13 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
                 <Avatar user={row.user} />
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-ink">{row.user.nickname}</p>
+                  <p className="truncate text-[12px] font-semibold text-ink">{row.user.nickname}</p>
                   <p className="truncate text-[11px] text-ink-mute">
                     {row.user.nombre} {row.user.apellidos}
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <span className={`${SIGN_COLUMN} font-mono text-sm tabular-nums text-sign`}>{row.signHits}</span>
                   <span className={`${EXACT_COLUMN} font-mono text-sm tabular-nums text-exact`}>{row.exactHits}</span>
                   <span className={`${TOTAL_COLUMN} font-mono text-lg font-bold tabular-nums text-ink`}>
