@@ -141,6 +141,11 @@ describe('la aplicación', () => {
     expect(screen.getByText('lucia').closest('li')).toHaveClass('card-live')
     expect(screen.getByText('marta').closest('li')).not.toHaveClass('card-live')
 
+    // Qué es cada cifra se dice una vez arriba, no bajo cada número.
+    for (const label of ['Nombre', '1X2', 'Exacto', 'Pts']) {
+      expect(screen.getAllByText(label), `falta ${label}`).toHaveLength(1)
+    }
+
     // El podio va en oro, plata y bronce claro, que sobre el fondo oscuro es
     // lo único que hace legible el tercer puesto.
     const main = screen.getByRole('main')
@@ -169,14 +174,18 @@ describe('la aplicación', () => {
     expect(within(main).getByText('Real Madrid')).toBeTruthy()
 
     // La leyenda aparece una sola vez, en la cabecera, no en cada equipo.
-    for (const label of ['PJ', 'G', 'E', 'P', 'GF', 'GC', 'DG', 'Pts']) {
+    for (const label of ['PJ', 'G', 'E', 'P', 'GF', 'GC', 'Pts']) {
       expect(within(main).getAllByText(label), `falta ${label}`).toHaveLength(1)
     }
 
-    // Y cada equipo trae sus ocho cifras a la derecha del nombre.
+    // La diferencia de goles ya no se pinta: ordena la tabla, pero no ocupa
+    // una columna en un móvil.
+    expect(within(main).queryByText('DG')).toBeNull()
+
+    // Y cada equipo trae sus siete cifras a la derecha del nombre.
     const first = rows[0]!
     const figures = [...first.querySelectorAll('span')].filter((span) => /^[+-]?\d+$/.test(span.textContent ?? ''))
-    expect(figures).toHaveLength(9) // las 8 columnas más la posición
+    expect(figures).toHaveLength(8) // las 7 columnas más la posición
   })
 
   it('abre la jornada en curso y deja apostar a quien ha pagado', async () => {

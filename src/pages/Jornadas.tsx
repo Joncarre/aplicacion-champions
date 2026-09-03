@@ -129,7 +129,13 @@ export default function Jornadas() {
 
       <MatchdayPicker value={matchday} onChange={setMatchday} currentMatchday={currentMatchday} />
 
-      <div className="mt-5 space-y-4">
+      {/*
+        Diez píxeles más de aire a cada lado que el resto de pantallas. Aquí no
+        hay tarjeta que separe el contenido del borde: los partidos se listan
+        sueltos sobre el fondo, y sin este margen los nombres y los marcadores
+        quedaban pegados al filo del móvil.
+      */}
+      <div className="mt-5 space-y-4 px-2.5">
         {isAdmin ? (
           <Alert>Como admin no puedes jugar la porra.</Alert>
         ) : !hasPaid ? (
