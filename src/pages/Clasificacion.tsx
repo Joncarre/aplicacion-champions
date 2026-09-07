@@ -143,8 +143,8 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
                 <Avatar user={row.user} />
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12px] font-semibold text-ink">{row.user.nickname}</p>
-                  <p className="truncate text-[11px] text-ink-mute">
+                  <p className="truncate text-[11px] font-semibold text-ink">{row.user.nickname}</p>
+                  <p className="truncate text-[10px] text-ink-mute">
                     {row.user.nombre} {row.user.apellidos}
                   </p>
                 </div>
