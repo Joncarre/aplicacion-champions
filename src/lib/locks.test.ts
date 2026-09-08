@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Match } from '@/types'
 import { madridToUtc } from './date'
-import { areExtrasLocked, isMatchOpen, lockReasonFor, resolveCurrentMatchday } from './locks'
+import { EXTRAS_DEADLINE, areExtrasLocked, isMatchOpen, lockReasonFor, resolveCurrentMatchday } from './locks'
 
 const match = (
   id: string,
@@ -105,13 +105,18 @@ describe('lockReasonFor', () => {
   })
 })
 
+/*
+  Contra la propia fecha de cierre y no contra un día escrito a mano: esa fecha
+  se mueve cuando se reabren las apuestas, y no tiene sentido tener que tocar
+  el test cada vez que se abren o se cierran.
+*/
 describe('areExtrasLocked', () => {
-  it('admite goleador y campeón hasta el 8 de septiembre', () => {
-    expect(areExtrasLocked(at('2026-09-07T23:59'))).toBe(false)
+  it('admite goleador y campeón hasta el instante del cierre', () => {
+    expect(areExtrasLocked(EXTRAS_DEADLINE - 60_000)).toBe(false)
   })
 
-  it('los cierra al empezar el 8 de septiembre', () => {
-    expect(areExtrasLocked(at('2026-09-08T00:00'))).toBe(true)
-    expect(areExtrasLocked(at('2026-09-08T12:00'))).toBe(true)
+  it('los cierra a partir de ese instante', () => {
+    expect(areExtrasLocked(EXTRAS_DEADLINE)).toBe(true)
+    expect(areExtrasLocked(EXTRAS_DEADLINE + 12 * 3_600_000)).toBe(true)
   })
 })
