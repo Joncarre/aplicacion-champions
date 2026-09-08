@@ -2,7 +2,9 @@ import type { PublicUser } from '@/types'
 
 const SIZES = {
   sm: 'size-8 text-[11px]',
-  md: 'size-11 text-sm',
+  // La talla de la clasificación: con los nombres ya pequeños, la foto es lo
+  // que identifica la fila de un vistazo, así que gana algo de tamaño.
+  md: 'size-13 text-sm',
   lg: 'size-24 text-2xl',
 } as const
 

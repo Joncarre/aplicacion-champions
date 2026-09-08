@@ -98,7 +98,7 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
           cabecera de la tabla mucho más que en la de la Champions. */}
       <div className="flex items-center gap-3 px-3 font-mono text-[10px] text-brand-soft">
         <span aria-hidden="true" className="w-6 shrink-0" />
-        <span aria-hidden="true" className="w-11 shrink-0" />
+        <span aria-hidden="true" className="w-13 shrink-0" />
         <span className="min-w-0 flex-1">Nombre</span>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className={SIGN_COLUMN}>1X2</span>
