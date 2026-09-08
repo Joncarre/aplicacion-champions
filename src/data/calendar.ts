@@ -24,13 +24,14 @@ export const MATCHES_PER_MATCHDAY = 18
 export const TOTAL_MATCHES = TOTAL_MATCHDAYS * MATCHES_PER_MATCHDAY
 
 /**
- * Cierre de las apuestas de máximo goleador y campeón.
+ * Cierre de las apuestas de máximo goleador y campeón: el arranque de la
+ * competición, el 8 de septiembre de 2026.
  *
- * Estaba en el arranque de la competición, el 8 de septiembre de 2026 a las
- * 00:00, pero se ha reabierto a mano para que quien llegó tarde pueda poner
- * las suyas. Se cierra volviendo a poner esa fecha, que ya está en el pasado.
+ * Se reabrieron un rato ese mismo día, antes de que se jugara ningún partido,
+ * para que quien llegó tarde pusiera las suyas. Volver a abrirlas es mover
+ * esta fecha al futuro; cerrarlas, devolverla aquí.
  */
-export const EXTRAS_DEADLINE = madridToUtc('2026-09-11T00:00')
+export const EXTRAS_DEADLINE = madridToUtc('2026-09-08T00:00')
 
 /** Fases eliminatorias, solo informativas mientras la pantalla de Cruces esté pendiente. */
 export const KNOCKOUT_ROUNDS = [
