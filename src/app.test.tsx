@@ -249,7 +249,7 @@ describe('la aplicación', () => {
 
     // Las tres gráficas de evolución.
     expect(screen.getByRole('img', { name: /puntos acumulados por jornada/i })).toBeTruthy()
-    expect(screen.getByRole('img', { name: /tus puntos frente a los del líder/i })).toBeTruthy()
+    expect(screen.getByRole('img', { name: /puntos que te saca el líder/i })).toBeTruthy()
     expect(screen.getByRole('img', { name: /de \d+ pronósticos/i })).toBeTruthy()
   })
 

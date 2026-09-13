@@ -115,53 +115,58 @@ export function CumulativeChart({ points }: { points: EvolutionPoint[] }) {
 /**
  * Cuántos puntos te sacaba el primero al cerrar cada jornada.
  *
- * En vez de dibujar la resta, se dibujan las dos trayectorias: la del líder en
- * dorado y la tuya en azul, con la banda entre ambas sombreada. La distancia
- * deja de ser un número abstracto y pasa a ser el hueco que se ve: se abre
- * cuando te descuelgas y se cierra cuando recortas.
+ * El líder es el cero de la gráfica, una línea dorada arriba con su punto en
+ * cada jornada, y tú cuelgas por debajo en azul. Como el primero va primero
+ * por definición, el eje solo tiene números negativos: lo que se lee de un
+ * vistazo es cuánto hueco hay, que se abre al descolgarse y se cierra al
+ * recortar. Cuando vas líder, tu punto se posa sobre el suyo.
  */
 export function GapChart({ points }: { points: EvolutionPoint[] }) {
   const gradientId = useId()
   const played = points.filter((point) => point.played)
   if (played.length === 0) return <ChartPlaceholder>Todavía no hay líder del que descolgarse.</ChartPlaceholder>
 
-  const ticks = axisTicks(Math.max(1, ...played.map((point) => point.leaderCumulative)), 4)
-  const ceiling = ticks[ticks.length - 1] ?? 1
-  const yAt = (value: number) => PAD_TOP + (1 - value / ceiling) * plotHeight
+  // La escala se mide hacia abajo desde el líder. El mínimo de cuatro evita
+  // que, yendo primero, el eje se quede con marcas repetidas.
+  const deepest = Math.min(0, ...played.map((point) => point.gapToLeader))
+  const steps = axisTicks(Math.max(4, -deepest), 3)
+  const floor = steps[steps.length - 1] ?? 1
+  const yAt = (gap: number) => PAD_TOP + (-gap / floor) * plotHeight
 
-  const mine: [number, number][] = played.map((point, index) => [xAt(index, played.length), yAt(point.cumulative)])
-  const leader: [number, number][] = played.map((point, index) => [
+  const leader: [number, number][] = played.map((_, index) => [xAt(index, played.length), yAt(0)])
+  const mine: [number, number][] = played.map((point, index) => [
     xAt(index, played.length),
-    yAt(point.leaderCumulative),
+    yAt(point.gapToLeader),
   ])
 
   // La banda se cierra volviendo por la línea del líder al revés.
   const band = `${toPath(leader)} L${[...mine].reverse().map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L')} Z`
-  const last = played[played.length - 1]
+  const gap = played[played.length - 1]?.gapToLeader ?? 0
 
   return (
     <figure className="px-1 py-3">
       <ChartHeading
-        title="Distancia con el líder"
-        detail={last?.gapToLeader === 0 ? 'Vas primero' : `${last?.gapToLeader ?? 0} puntos`}
+        title="Tu distancia"
+        detail={gap === 0 ? 'Vas primero' : `${gap} puntos con el líder`}
       />
 
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="mt-3 h-auto w-full"
         role="img"
-        aria-label={`Tus puntos frente a los del líder en cada jornada: ${played
-          .map((point) => `jornada ${point.matchday}, ${point.cumulative} contra ${point.leaderCumulative}`)
+        aria-label={`Puntos que te saca el líder en cada jornada: ${played
+          .map((point) => `jornada ${point.matchday}, ${point.gapToLeader === 0 ? 'vas primero' : `${point.gapToLeader} puntos`}`)
           .join('; ')}`}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-gold)" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.06" />
+            <stop offset="0%" stopColor="var(--color-gold)" stopOpacity="0.20" />
+            <stop offset="100%" stopColor="var(--color-brand)" stopOpacity="0.04" />
           </linearGradient>
         </defs>
 
-        <YAxis ticks={ticks} yAt={yAt} />
+        {/* Las marcas del eje van en negativo: por encima del líder no hay nada. */}
+        <YAxis ticks={steps.map((step) => -step)} yAt={yAt} />
 
         <path d={band} fill={`url(#${gradientId})`} />
 
@@ -182,9 +187,23 @@ export function GapChart({ points }: { points: EvolutionPoint[] }) {
           strokeLinejoin="round"
         />
 
+        {/* El líder, en dorado, marcando el cero de cada jornada. */}
+        {leader.map(([x, y], index) => (
+          <circle
+            key={`lider-${index}`}
+            cx={x}
+            cy={y}
+            r={index === leader.length - 1 ? 3.5 : 2.5}
+            fill={index === leader.length - 1 ? 'var(--color-gold)' : 'var(--color-base)'}
+            stroke="var(--color-gold)"
+            strokeWidth="1.5"
+          />
+        ))}
+
+        {/* Y tú, en azul, colgando de él. */}
         {mine.map(([x, y], index) => (
           <circle
-            key={index}
+            key={`yo-${index}`}
             cx={x}
             cy={y}
             r={index === mine.length - 1 ? 4 : 2.5}
