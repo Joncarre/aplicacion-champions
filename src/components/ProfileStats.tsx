@@ -1,5 +1,3 @@
-import { POINTS } from '@/lib/scoring'
-
 interface ProfileStatsProps {
   position: number | null
   participants: number
@@ -61,10 +59,6 @@ export function ProfileStats({
           </div>
         ))}
       </div>
-
-      <p className="px-5 pt-4 text-center font-mono text-[10px] text-ink-mute">
-        {POINTS.exact} pts por marcador exacto · {POINTS.sign} pt por signo
-      </p>
     </section>
   )
 }

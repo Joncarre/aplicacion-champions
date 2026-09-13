@@ -4,9 +4,8 @@ import type { Extras, PublicUser, Team } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
 import { useNow } from '@/hooks/useNow'
-import { EXTRAS_DEADLINE } from '@/data/calendar'
 import { factOfTheDay } from '@/data/facts'
-import { formatFullDate, formatShortDate } from '@/lib/date'
+import { formatShortDate } from '@/lib/date'
 import { areExtrasLocked } from '@/lib/locks'
 import { loadImage } from '@/lib/image'
 import { POINTS } from '@/lib/scoring'
@@ -134,7 +133,6 @@ export default function Perfil() {
           </Reveal>
         </>
       )}
-
     </>
   )
 }
@@ -332,10 +330,7 @@ function SpecialBets({ user, teams, extras, now, onSaved }: SpecialBetsProps) {
 
         {feedback ? <Alert tone={feedback.tone}>{feedback.text}</Alert> : null}
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] leading-relaxed text-ink-mute">
-            {locked ? 'Cerradas el' : 'Abiertas hasta el'} {formatFullDate(EXTRAS_DEADLINE)}
-          </p>
+        <div className="flex items-center justify-end gap-3">
           {!disabled ? (
             <button
               type="button"
@@ -386,8 +381,8 @@ function SpecialSlot({
       <input
         id={id}
         list={list}
-        className="mt-1.5 w-full bg-transparent pb-1.5 font-display text-lg text-ink
-                   placeholder:font-sans placeholder:text-sm placeholder:text-ink-mute
+        className="mt-1.5 w-full bg-transparent pb-1.5 font-display text-sm text-ink
+                   placeholder:font-sans placeholder:text-[13px] placeholder:text-ink-mute
                    focus:text-brand-soft focus:outline-none disabled:text-ink-soft"
         value={value}
         onChange={(event) => onChange(event.target.value)}
