@@ -142,7 +142,7 @@ describe('la aplicación', () => {
     expect(screen.getByText('marta').closest('li')).not.toHaveClass('card-live')
 
     // Qué es cada cifra se dice una vez arriba, no bajo cada número.
-    for (const label of ['Nombre', '1X2', 'Exacto', 'Pts']) {
+    for (const label of ['Nombre', '1X2', 'Exac.', 'Pts']) {
       expect(screen.getAllByText(label), `falta ${label}`).toHaveLength(1)
     }
 

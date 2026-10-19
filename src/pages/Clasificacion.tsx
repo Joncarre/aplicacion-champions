@@ -74,7 +74,7 @@ const ZONE_TINT = {
 
 /** Anchos compartidos entre la cabecera y las filas, para que las columnas cuadren. */
 const SIGN_COLUMN = 'w-7 shrink-0 text-center'
-const EXACT_COLUMN = 'w-10 shrink-0 text-center'
+const EXACT_COLUMN = 'w-8 shrink-0 text-center'
 const TOTAL_COLUMN = 'w-9 shrink-0 text-center'
 const LAST_COLUMN = 'w-7 shrink-0 text-center'
 
@@ -127,7 +127,7 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
         <span className="min-w-0 flex-1">Nombre</span>
         <div className="flex shrink-0 items-center gap-1">
           <span className={SIGN_COLUMN}>1X2</span>
-          <span className={EXACT_COLUMN}>Exacto</span>
+          <span className={EXACT_COLUMN}>Exac.</span>
           <span className={TOTAL_COLUMN}>Pts</span>
           {lastPlayed > 0 ? <span className={`${LAST_COLUMN} text-lilac`}>J{lastPlayed}</span> : null}
         </div>
