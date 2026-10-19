@@ -73,12 +73,37 @@ const ZONE_TINT = {
 } as const
 
 /** Anchos compartidos entre la cabecera y las filas, para que las columnas cuadren. */
-const SIGN_COLUMN = 'w-8 shrink-0 text-center'
-const EXACT_COLUMN = 'w-11 shrink-0 text-center'
-const TOTAL_COLUMN = 'w-10 shrink-0 text-center'
+const SIGN_COLUMN = 'w-7 shrink-0 text-center'
+const EXACT_COLUMN = 'w-10 shrink-0 text-center'
+const TOTAL_COLUMN = 'w-9 shrink-0 text-center'
+const LAST_COLUMN = 'w-7 shrink-0 text-center'
+
+/**
+ * Última jornada con algún resultado. Es la que mide la columna del final, y
+ * da nombre a su cabecera: en vez de un rótulo vago tipo «última», pone el
+ * número de la jornada, que dice exactamente a qué se refiere el `+21`.
+ *
+ * `resolved` cuenta partidos con resultado, no apuestas, así que sale la misma
+ * jornada para todo el mundo y una sola cabecera vale para la tabla entera.
+ */
+function lastPlayedMatchday(rows: InternalRow[]): number {
+  let found = 0
+  for (const row of rows) {
+    for (const bucket of row.matchdays) {
+      if (bucket.resolved > 0 && bucket.matchday > found) found = bucket.matchday
+    }
+  }
+  return found
+}
+
+/** Lo que sacó un participante en una jornada concreta. */
+function pointsAt(row: InternalRow, matchday: number): number {
+  return row.matchdays.find((bucket) => bucket.matchday === matchday)?.points ?? 0
+}
 
 function InternalTable({ rows }: { rows: InternalRow[] }) {
   const { user } = useAuth()
+  const lastPlayed = lastPlayedMatchday(rows)
 
   if (rows.length === 0) {
     return (
@@ -100,10 +125,11 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
         <span aria-hidden="true" className="w-6 shrink-0" />
         <span aria-hidden="true" className="w-13 shrink-0" />
         <span className="min-w-0 flex-1">Nombre</span>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           <span className={SIGN_COLUMN}>1X2</span>
           <span className={EXACT_COLUMN}>Exacto</span>
           <span className={TOTAL_COLUMN}>Pts</span>
+          {lastPlayed > 0 ? <span className={`${LAST_COLUMN} text-lilac`}>J{lastPlayed}</span> : null}
         </div>
       </div>
 
@@ -149,12 +175,23 @@ function InternalTable({ rows }: { rows: InternalRow[] }) {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1">
                   <span className={`${SIGN_COLUMN} font-mono text-sm tabular-nums text-sign`}>{row.signHits}</span>
                   <span className={`${EXACT_COLUMN} font-mono text-sm tabular-nums text-exact`}>{row.exactHits}</span>
-                  <span className={`${TOTAL_COLUMN} font-mono text-lg font-bold tabular-nums text-ink`}>
+                  <span className={`${TOTAL_COLUMN} font-mono text-base font-bold tabular-nums text-ink`}>
                     {row.totalPoints}
                   </span>
+                  {/* Lo sacado en la última jornada. En gris cuando es cero: el
+                      neón es para lo que sí se ha ganado. */}
+                  {lastPlayed > 0 ? (
+                    <span
+                      className={`${LAST_COLUMN} font-mono text-[12px] font-semibold tabular-nums ${
+                        pointsAt(row, lastPlayed) > 0 ? 'text-lilac' : 'text-ink-mute'
+                      }`}
+                    >
+                      +{pointsAt(row, lastPlayed)}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </Reveal>

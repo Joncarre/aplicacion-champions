@@ -146,9 +146,14 @@ describe('la aplicación', () => {
       expect(screen.getAllByText(label), `falta ${label}`).toHaveLength(1)
     }
 
+    // La última columna se titula con el número de la jornada que mide, y
+    // trae lo que sacó cada uno en ella.
+    const main = screen.getByRole('main')
+    expect(within(main).getAllByText(/^J\d$/)).toHaveLength(1)
+    expect(within(main).getAllByText(/^\+\d+$/)).toHaveLength(DEMO_PARTICIPANTS.length)
+
     // El podio va en oro, plata y bronce claro, que sobre el fondo oscuro es
     // lo único que hace legible el tercer puesto.
-    const main = screen.getByRole('main')
     const positions = within(main)
       .getAllByRole('listitem')
       .map(

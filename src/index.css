@@ -30,6 +30,9 @@
   --color-aqua: #9bd8ce;
   --color-gold: #e6c86e;
   --color-gold-deep: #6b5518;
+  /* Lila de neón para lo que acabas de ganar: ni verde de acierto ni dorado
+     de podio, para que no se confunda con ninguno de los dos. */
+  --color-lilac: #d0a9ff;
 
   /* Estados */
   --color-exact: #38d6a4;
