@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ShieldCheck, Workflow } from 'lucide-react'
-import type { Match, PublicUser, Team } from '@/types'
+import type { Match, Prediction, PublicUser, Team } from '@/types'
 import { useData } from '@/context/DataContext'
 import { formatLongDay, formatTime, madridDayKey } from '@/lib/date'
 import { getBackend } from '@/services/backend'
@@ -11,11 +11,12 @@ import { ExtrasPanel } from './ExtrasPanel'
 import { Alert, Segmented } from '@/components/ui'
 import { Spinner } from '@/components/Spinner'
 
-type Section = 'usuarios' | 'resultados' | 'apuestas' | 'cruces'
+type Section = 'usuarios' | 'resultados' | 'faltan' | 'apuestas' | 'cruces'
 
 const SECTIONS: { value: Section; label: string }[] = [
   { value: 'usuarios', label: 'Usuarios' },
   { value: 'resultados', label: 'Resultados' },
+  { value: 'faltan', label: 'Faltan' },
   { value: 'apuestas', label: 'Apuestas' },
   { value: 'cruces', label: 'Cruces' },
 ]
@@ -67,6 +68,8 @@ export default function AdminPanels() {
           <UsersPanel />
         ) : section === 'resultados' ? (
           <ResultsPanel />
+        ) : section === 'faltan' ? (
+          <PendingPanel />
         ) : section === 'apuestas' ? (
           <ExtrasPanel />
         ) : (
@@ -378,6 +381,114 @@ function GoalInput({
       className="h-8 w-9 shrink-0 rounded-md border border-line bg-raised text-center font-mono text-sm tabular-nums text-ink
                  placeholder:text-ink-mute focus:border-brand focus:outline-none"
     />
+  )
+}
+
+/* ────────────────────────────── Quién va suelto ────────────────────────────── */
+
+/**
+ * A quién le falta por apostar la jornada que está abierta.
+ *
+ * Es la pregunta que hay que hacerse los días antes de cada jornada, y hasta
+ * ahora había que salir a consultar la base de datos para responderla. Mira la
+ * jornada en curso, que es la única que admite apuestas: las pasadas están
+ * cerradas y las futuras no se pueden tocar todavía.
+ *
+ * Las apuestas no viven en el contexto de datos —cada usuario solo se descarga
+ * las suyas—, así que aquí se piden aparte, y solo las de esa jornada.
+ */
+function PendingPanel() {
+  const { users, currentMatchday, matchesByMatchday } = useData()
+  const [predictions, setPredictions] = useState<Prediction[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    setPredictions(null)
+    setError(null)
+    void (async () => {
+      try {
+        const backend = await getBackend()
+        const found = await backend.listPredictionsByMatchday(currentMatchday)
+        if (alive) setPredictions(found)
+      } catch (cause) {
+        if (alive) setError(cause instanceof Error ? cause.message : 'No se han podido cargar las apuestas')
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [currentMatchday])
+
+  const total = matchesByMatchday(currentMatchday).length
+
+  const rows = useMemo(() => {
+    if (!predictions) return []
+    const byUser = new Map<string, number>()
+    for (const prediction of predictions) {
+      byUser.set(prediction.userId, (byUser.get(prediction.userId) ?? 0) + 1)
+    }
+
+    // El administrador no juega, así que no se le reclama nada.
+    return users
+      .filter((participant) => !participant.isAdmin)
+      .map((participant) => ({ participant, done: byUser.get(participant.id) ?? 0 }))
+      .filter((row) => row.done < total)
+      .sort(
+        (a, b) => a.done - b.done || a.participant.nickname.localeCompare(b.participant.nickname, 'es'),
+      )
+  }, [predictions, users, total])
+
+  if (error) return <Alert tone="error">{error}</Alert>
+
+  if (!predictions) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner label="Contando apuestas" />
+      </div>
+    )
+  }
+
+  const participants = users.filter((participant) => !participant.isAdmin).length
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2.5">
+        <SummaryTile label="Jornada" value={currentMatchday} />
+        <SummaryTile label="Al día" value={participants - rows.length} />
+        <SummaryTile label="Les falta" value={rows.length} tone="gold" />
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="py-10 text-center text-sm text-balance text-ink-soft">
+          Todos han apostado la jornada {currentMatchday} completa.
+        </p>
+      ) : (
+        <ul className="divide-y divide-line-soft">
+          {rows.map(({ participant, done }) => (
+            <li key={participant.id} className="flex items-center gap-3 py-2.5">
+              <Avatar user={participant} size="sm" />
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-ink">{participant.nickname}</p>
+                <p className="truncate text-xs text-ink-mute">
+                  {participant.nombre} {participant.apellidos}
+                </p>
+              </div>
+
+              {/* Quien no ha empezado se distingue de quien se dejó uno suelto. */}
+              <span
+                className={`shrink-0 font-mono text-[11px] font-semibold tabular-nums ${
+                  done === 0 ? 'text-miss' : 'text-pending'
+                }`}
+              >
+                {done}/{total}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

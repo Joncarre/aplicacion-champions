@@ -31,6 +31,8 @@ export interface Backend {
   /* Apuestas */
   listPredictions(): Promise<Prediction[]>
   listPredictionsByUser(userId: string): Promise<Prediction[]>
+  /** Solo las de una jornada: es lo que mira el admin para ver quién va suelto. */
+  listPredictionsByMatchday(matchday: number): Promise<Prediction[]>
   savePredictions(predictions: Prediction[]): Promise<void>
   deletePrediction(id: string): Promise<void>
 

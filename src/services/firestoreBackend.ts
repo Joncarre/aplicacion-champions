@@ -141,6 +141,16 @@ export function createFirestoreBackend(): Backend {
       return snapshot.docs.map((d) => d.data() as Prediction)
     },
 
+    // Se consulta por jornada en vez de traerse la colección entera: al final
+    // de la fase liga son casi siete mil apuestas, y aquí solo hacen falta las
+    // ochocientas de una jornada.
+    async listPredictionsByMatchday(matchday) {
+      const snapshot = await getDocs(
+        query(collection(db, COLLECTIONS.predictions), where('matchday', '==', matchday)),
+      )
+      return snapshot.docs.map((d) => d.data() as Prediction)
+    },
+
     async savePredictions(predictions) {
       await commitInChunks(
         predictions.map((prediction) => (batch) => batch.set(ref(COLLECTIONS.predictions, prediction.id), clean(prediction))),

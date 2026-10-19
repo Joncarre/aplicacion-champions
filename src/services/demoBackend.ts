@@ -162,6 +162,9 @@ export function createDemoBackend(): Backend {
     listPredictionsByUser: (userId) =>
       guard(() => read<Prediction[]>('predictions', []).filter((p) => p.userId === userId)),
 
+    listPredictionsByMatchday: (matchday) =>
+      guard(() => read<Prediction[]>('predictions', []).filter((p) => p.matchday === matchday)),
+
     savePredictions: (predictions) =>
       guard(() => {
         const stored = read<Prediction[]>('predictions', [])

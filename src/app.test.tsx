@@ -317,8 +317,9 @@ describe('la aplicación', () => {
     // Cerrar sesión está arriba, sin tener que recorrer el panel entero.
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
 
-    // Solo las cuatro pestañas que se usan: ni sembrar ni ajustes sueltos.
+    // Solo las pestañas que se usan: ni sembrar ni ajustes sueltos.
     expect(screen.getByRole('tab', { name: 'Cruces' })).toBeVisible()
+    expect(screen.getByRole('tab', { name: 'Faltan' })).toBeVisible()
     expect(screen.queryByRole('tab', { name: 'Equipos' })).toBeNull()
     expect(screen.queryByRole('tab', { name: 'Calendario' })).toBeNull()
     expect(screen.queryByRole('tab', { name: 'Torneo' })).toBeNull()
@@ -373,6 +374,32 @@ describe('la aplicación', () => {
     // Al haber cambios aparece el botón de guardar, que recalcula la porra.
     await user.click(await screen.findByRole('button', { name: /guardar 1 resultado/i }))
     expect(await screen.findByText(/recalculados/i)).toBeTruthy()
+  })
+
+  it('le dice al administrador a quién le falta por apostar la jornada abierta', async () => {
+    const user = await loginAs('joncarre')
+
+    await user.click(await screen.findByRole('link', { name: 'Perfil' }))
+    await user.click(await screen.findByRole('tab', { name: 'Faltan' }))
+
+    const main = screen.getByRole('main')
+    expect(await within(main).findByText('Les falta')).toBeVisible()
+
+    /*
+      En los datos de demostración la jornada abierta está a medio apostar, así
+      que la lista no puede salir ni vacía ni con los cuarenta y siete: cada
+      fila lleva lo que ese usuario tiene puesto de los dieciocho partidos.
+      Y el administrador nunca aparece, que no juega.
+      */
+    const filas = await within(main).findAllByText(new RegExp(`^\\d+/${MATCHES_PER_MATCHDAY}$`))
+    expect(filas.length).toBeGreaterThan(0)
+    expect(filas.length).toBeLessThanOrEqual(DEMO_PARTICIPANTS.length)
+
+    // Acotado a la propia lista: «joncarre» sale también arriba, que es el
+    // nickname del perfil que se está mirando.
+    const lista = filas[0]!.closest('ul')
+    expect(lista).not.toBeNull()
+    expect(within(lista!).queryByText('joncarre')).toBeNull()
   })
 
   it('enseña al administrador las apuestas especiales de todos', async () => {
